@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>MonDjai/Trépor</title>
+<meta name="description" content="Le point du jour, en 30 secondes. Suivi de recette et charges pour chauffeurs.">
+<meta name="theme-color" content="#11141a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Trépor">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-512.png">
+<link rel="apple-touch-icon" href="icon-512.png">
+<style>
+  :root{
+    --bg:#11141a;
+    --bg-2:#0c0e13;
+    --card:#1a1e27;
+    --card-2:#20242f;
+    --border:#2a2f3b;
+    --text:#f2f3f5;
+    --text-dim:#9aa0ac;
+    --text-faint:#666c78;
+    --accent:#f5a623;
+    --accent-dark:#d68a0f;
+    --accent-text:#11141a;
+    --green:#34b37e;
+    --red:#ff6b5e;
+    --radius:16px;
+    --radius-sm:10px;
+    --safe-top:env(safe-area-inset-top,0px);
+    --safe-bottom:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg-2);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  #app{
+    max-width:520px;
+    margin:0 auto;
+    min-height:100vh;
+    background:var(--bg);
+    display:flex;
+    flex-direction:column;
+    padding-bottom:calc(90px + var(--safe-bottom));
+  }
+  button{font-family:inherit;}
+  input{font-family:inherit;}
+
+  /* ---------- Écrans d'onboarding ---------- */
+  .onb{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    padding:calc(28px + var(--safe-top)) 22px 24px;
+  }
+  .onb-steps{
+    display:flex;
+    gap:6px;
+    margin-bottom:22px;
+  }
+  .onb-step-dot{
+    flex:1;
+    height:4px;
+    border-radius:2px;
+    background:var(--border);
+  }
+  .onb-step-dot.done{background:var(--accent);}
+  .onb-eyebrow{
+    color:var(--accent);
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    margin:0 0 6px;
+  }
+  .onb-title{
+    font-size:24px;
+    font-weight:800;
+    margin:0 0 8px;
+    line-height:1.25;
+  }
+  .onb-sub{
+    color:var(--text-dim);
+    font-size:15px;
+    line-height:1.5;
+    margin:0 0 24px;
+  }
+  .onb-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+    margin-bottom:18px;
+  }
+  .choice-card{
+    background:var(--card);
+    border:2px solid var(--border);
+    border-radius:var(--radius);
+    padding:20px 12px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+    text-align:center;
+    color:var(--text);
+    font-size:15px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .choice-card .emoji{font-size:34px;}
+  .choice-card.selected{
+    border-color:var(--accent);
+    background:linear-gradient(180deg, rgba(245,166,35,.16), rgba(245,166,35,.06));
+  }
+  .choice-row{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    margin-bottom:18px;
+  }
+  .choice-row .choice-card{
+    flex-direction:row;
+    justify-content:flex-start;
+    text-align:left;
+    padding:18px 16px;
+  }
+  .choice-row .choice-card .emoji{font-size:26px;}
+
+  .field-label{
+    font-size:14px;
+    font-weight:700;
+    color:var(--text);
+    margin:4px 0 8px;
+  }
+  .field-help{
+    font-size:13px;
+    color:var(--text-dim);
+    margin:8px 0 0;
+    line-height:1.5;
+  }
+  .amount-input-wrap{
+    display:flex;
+    align-items:center;
+    background:var(--card);
+    border:2px solid var(--border);
+    border-radius:var(--radius);
+    padding:4px 16px;
+  }
+  .amount-input-wrap:focus-within{border-color:var(--accent);}
+  .amount-input-wrap input{
+    flex:1;
+    background:transparent;
+    border:none;
+    outline:none;
+    color:var(--text);
+    font-size:28px;
+    font-weight:800;
+    padding:14px 4px;
+    min-width:0;
+    -moz-appearance:textfield;
+  }
+  .amount-input-wrap input::-webkit-outer-spin-button,
+  .amount-input-wrap input::-webkit-inner-spin-button{
+    -webkit-appearance:none; margin:0;
+  }
+  .amount-input-wrap .suffix{
+    color:var(--text-dim);
+    font-size:18px;
+    font-weight:700;
+  }
+
+  .onb-spacer{flex:1;}
+
+  .btn{
+    display:block;
+    width:100%;
+    border:none;
+    border-radius:var(--radius);
+    padding:16px 18px;
+    font-size:16px;
+    font-weight:800;
+    cursor:pointer;
+    text-align:center;
+  }
+  .btn-primary{
+    background:var(--accent);
+    color:var(--accent-text);
+  }
+  .btn-primary:disabled{
+    background:var(--border);
+    color:var(--text-faint);
+    cursor:not-allowed;
+  }
+  .btn-ghost{
+    background:transparent;
+    color:var(--text-dim);
+    border:2px solid var(--border);
+  }
+  .btn-danger-ghost{
+    background:transparent;
+    color:var(--red);
+    border:2px solid var(--border);
+  }
+  .btn-row{display:flex; gap:10px;}
+  .btn-row .btn{flex:1;}
+  .btn-sm{padding:10px 14px; font-size:14px; border-radius:var(--radius-sm);}
+
+  /* ---------- Rubriques (sélection) ---------- */
+  .rub-list{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    margin-bottom:16px;
+  }
+  .rub-row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    background:var(--card);
+    border:2px solid var(--border);
+    border-radius:var(--radius-sm);
+    padding:12px 14px;
+    cursor:pointer;
+  }
+  .rub-row.on{border-color:var(--rub-color, var(--accent));}
+  .rub-icon{
+    width:40px;height:40px;
+    border-radius:10px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:20px;
+    background:var(--rub-color, var(--accent));
+    flex-shrink:0;
+  }
+  .rub-name{flex:1; font-size:15px; font-weight:600;}
+  .rub-name .rub-note{display:block; font-size:12px; color:var(--text-dim); font-weight:400; margin-top:1px;}
+  .switch{
+    width:44px;height:26px;
+    border-radius:14px;
+    background:var(--border);
+    position:relative;
+    flex-shrink:0;
+  }
+  .switch.on{background:var(--accent);}
+  .switch::after{
+    content:"";
+    position:absolute;
+    top:3px; left:3px;
+    width:20px;height:20px;
+    border-radius:50%;
+    background:#fff;
+    transition:left .15s ease;
+  }
+  .switch.on::after{left:21px;}
+
+  .add-rub-btn{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    border:2px dashed var(--border);
+    border-radius:var(--radius-sm);
+    padding:14px;
+    color:var(--text-dim);
+    font-weight:700;
+    font-size:14px;
+    cursor:pointer;
+    margin-bottom:10px;
+  }
+  .warn-msg{
+    background:rgba(245,166,35,.12);
+    border:1px solid rgba(245,166,35,.35);
+    color:var(--accent);
+    border-radius:var(--radius-sm);
+    padding:10px 12px;
+    font-size:13px;
+    font-weight:600;
+    margin-bottom:14px;
+  }
+
+  .perso-form{
+    background:var(--card-2);
+    border:2px solid var(--border);
+    border-radius:var(--radius);
+    padding:16px;
+    margin-bottom:14px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .text-input{
+    width:100%;
+    background:var(--card);
+    border:2px solid var(--border);
+    border-radius:var(--radius-sm);
+    color:var(--text);
+    font-size:15px;
+    padding:12px 14px;
+    outline:none;
+  }
+  .text-input:focus{border-color:var(--accent);}
+  .emoji-grid{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .emoji-opt{
+    width:42px;height:42px;
+    border-radius:10px;
+    background:var(--card);
+    border:2px solid var(--border);
+    font-size:20px;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+  }
+  .emoji-opt.selected{border-color:var(--accent);}
+  .color-grid{display:flex; flex-wrap:wrap; gap:10px; align-items:center;}
+  .color-opt{
+    width:32px;height:32px;
+    border-radius:50%;
+    border:3px solid transparent;
+    cursor:pointer;
+  }
+  .color-opt.selected{border-color:#fff;}
+  .color-custom-wrap{display:flex; align-items:center; gap:8px;}
+  .color-custom-wrap input[type=color]{
+    width:36px;height:36px;
+    border:none;
+    border-radius:50%;
+    overflow:hidden;
+    background:none;
+    padding:0;
+    cursor:pointer;
+  }
+
+  /* ---------- Accueil ---------- */
+  .home-header{
+    padding:calc(20px + var(--safe-top)) 20px 6px;
+  }
+  .home-date{
+    color:var(--text-dim);
+    font-size:14px;
+    font-weight:600;
+    text-transform:capitalize;
+  }
+  .home-greet{
+    font-size:22px;
+    font-weight:800;
+    margin:2px 0 0;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+
+  .solde-card{
+    margin:14px 20px 0;
+    background:linear-gradient(160deg, var(--card), var(--card-2));
+    border:1px solid var(--border);
+    border-radius:20px;
+    padding:24px 20px;
+    text-align:center;
+  }
+  .solde-card.perte{
+    background:linear-gradient(160deg, rgba(255,107,94,.16), var(--card));
+    border-color:rgba(255,107,94,.4);
+  }
+  .solde-label{
+    font-size:13px;
+    font-weight:700;
+    color:var(--text-dim);
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+  .solde-value{
+    font-size:40px;
+    font-weight:900;
+    margin:6px 0 0;
+    line-height:1.15;
+    color:var(--green);
+  }
+  .solde-value.neg{color:var(--red);}
+  .perte-banner{
+    margin-top:10px;
+    display:inline-block;
+    background:rgba(255,107,94,.16);
+    color:var(--red);
+    font-weight:800;
+    font-size:14px;
+    border-radius:999px;
+    padding:6px 14px;
+  }
+  .solde-sub{
+    display:flex;
+    justify-content:center;
+    gap:22px;
+    margin-top:16px;
+    padding-top:14px;
+    border-top:1px solid var(--border);
+  }
+  .solde-sub-item{text-align:center;}
+  .solde-sub-item .k{font-size:12px; color:var(--text-dim); font-weight:600;}
+  .solde-sub-item .v{font-size:17px; font-weight:800; margin-top:2px;}
+
+  .recette-btn{
+    margin:16px 20px 0;
+    background:var(--card);
+    border:2px solid var(--accent);
+    color:var(--text);
+    border-radius:var(--radius);
+    padding:16px 18px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    cursor:pointer;
+    text-align:left;
+  }
+  .recette-btn .ic{font-size:26px;}
+  .recette-btn .lbl{flex:1;}
+  .recette-btn .lbl .t1{font-weight:800; font-size:15px;}
+  .recette-btn .lbl .t2{color:var(--text-dim); font-size:13px; margin-top:2px;}
+  .recette-btn.set{border-color:var(--green);}
+
+  .charges-section{
+    margin:22px 20px 0;
+  }
+  .charges-title{
+    font-size:15px;
+    font-weight:800;
+    margin-bottom:10px;
+  }
+  .charge-row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--radius-sm);
+    padding:12px 12px;
+    margin-bottom:8px;
+  }
+  .charge-row .rub-icon{width:38px;height:38px;font-size:18px;}
+  .charge-info{flex:1; min-width:0;}
+  .charge-info .n{font-size:14px; font-weight:700;}
+  .charge-amount{font-size:15px; font-weight:800; color:var(--text);}
+  .charge-del{
+    width:30px;height:30px;
+    border-radius:50%;
+    background:var(--card-2);
+    border:none;
+    color:var(--text-dim);
+    font-size:16px;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+  .empty-state{
+    text-align:center;
+    color:var(--text-faint);
+    font-size:14px;
+    padding:22px 10px;
+    border:1px dashed var(--border);
+    border-radius:var(--radius-sm);
+  }
+
+  .fab{
+    position:fixed;
+    right:20px;
+    bottom:calc(24px + var(--safe-bottom));
+    width:60px;height:60px;
+    border-radius:50%;
+    background:var(--accent);
+    color:var(--accent-text);
+    font-size:30px;
+    font-weight:700;
+    border:none;
+    box-shadow:0 6px 18px rgba(0,0,0,.4);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    z-index:40;
+  }
+  .fab-wrap{
+    max-width:520px;
+    margin:0 auto;
+    position:relative;
+  }
+
+  /* ---------- Modales ---------- */
+  .modal-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(5,6,9,.62);
+    display:flex;
+    align-items:flex-end;
+    z-index:100;
+  }
+  .modal-sheet{
+    width:100%;
+    max-width:520px;
+    margin:0 auto;
+    background:var(--bg);
+    border-radius:22px 22px 0 0;
+    padding:22px 20px calc(22px + var(--safe-bottom));
+    max-height:88vh;
+    overflow-y:auto;
+    border-top:1px solid var(--border);
+    animation:slideUp .18s ease;
+  }
+  @keyframes slideUp{from{transform:translateY(24px); opacity:.4;} to{transform:translateY(0); opacity:1;}}
+  .modal-handle{
+    width:40px;height:4px;
+    border-radius:2px;
+    background:var(--border);
+    margin:0 auto 16px;
+  }
+  .modal-title{
+    font-size:19px;
+    font-weight:800;
+    margin:0 0 4px;
+  }
+  .modal-sub{
+    font-size:13px;
+    color:var(--text-dim);
+    margin:0 0 18px;
+  }
+  .rub-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:10px;
+    margin-bottom:6px;
+  }
+  .rub-tile{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--radius-sm);
+    padding:14px 8px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:8px;
+    cursor:pointer;
+    text-align:center;
+  }
+  .rub-tile .rub-icon{width:44px;height:44px;font-size:22px;}
+  .rub-tile .name{font-size:12px; font-weight:700; line-height:1.25;}
+  .rub-tile.add-tile{
+    border-style:dashed;
+    color:var(--text-dim);
+    justify-content:center;
+  }
+  .rub-tile.add-tile .rub-icon{
+    background:var(--card-2);
+    color:var(--text-dim);
+    font-size:22px;
+  }
+
+  .selected-rub-banner{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:var(--card);
+    border-radius:var(--radius-sm);
+    padding:10px 12px;
+    margin-bottom:16px;
+  }
+  .selected-rub-banner .rub-icon{width:36px;height:36px;font-size:17px;}
+  .selected-rub-banner .name{font-weight:700; font-size:14px;}
+
+  .toast{
+    position:fixed;
+    left:50%;
+    bottom:calc(30px + var(--safe-bottom));
+    transform:translateX(-50%);
+    background:var(--card-2);
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:10px 18px;
+    border-radius:999px;
+    font-size:13px;
+    font-weight:700;
+    z-index:200;
+    box-shadow:0 6px 16px rgba(0,0,0,.4);
+  }
+
+  .confirm-box{
+    text-align:center;
+  }
+  .confirm-box p{color:var(--text-dim); font-size:14px; line-height:1.5;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* =========================================================
+     MonDjai/Trépor — Sprint 1
+     Configuration initiale, saisie du jour, calcul automatique.
+     Tout est stocké en localStorage. Aucun appel réseau.
+  ========================================================= */
+
+  var STORAGE_KEY = "trepor_state_v1";
+
+  var RUBRIQUES_DEFAUT = [
+    { id:"dioulatchai",    nom:"Dioulatchai (part propriétaire)", icone:"🔑", couleur:"#f5a623", parDefautLocataire:true },
+    { id:"carburant",      nom:"Carburant",                       icone:"⛽", couleur:"#e5533c", parDefautLocataire:false },
+    { id:"assurance",      nom:"Assurance",                       icone:"🛡️", couleur:"#4c8bf5", parDefautLocataire:false },
+    { id:"syndicat",       nom:"Syndicat",                        icone:"🤝", couleur:"#34b37e", parDefautLocataire:false },
+    { id:"taxe_communale", nom:"Taxe communale",                  icone:"🏛️", couleur:"#9b6bd6", parDefautLocataire:false },
+    { id:"droit_sol",      nom:"Droit de sol",                    icone:"📍", couleur:"#e0578a", parDefautLocataire:false },
+    { id:"lavage",         nom:"Lavage",                          icone:"🧽", couleur:"#35b4c9", parDefautLocataire:null }, // pas coché par défaut
+    { id:"entretien",      nom:"Entretien (pneu, panne, vidange)",icone:"🔧", couleur:"#c9a227", parDefautLocataire:false }
+  ];
+
+  var SEGMENTS = [
+    { id:"taxi_compteur", nom:"Taxi compteur", emoji:"🚕" },
+    { id:"wow",           nom:"Wôrô-wôrô",      emoji:"🚗" },
+    { id:"moto_taxi",     nom:"Moto-taxi",      emoji:"🏍️" },
+    { id:"vtc_yango",     nom:"VTC (Yango)",    emoji:"📱" }
+  ];
+
+  var EMOJI_CHOICES = ["💧","🍔","📱","🧯","🧾","🚔","🅿️","🛞","🧴","🧰","🧊","💊","🏠","🐔","☕","➕"];
+  var COLOR_CHOICES = ["#f5a623","#e5533c","#4c8bf5","#34b37e","#9b6bd6","#e0578a","#35b4c9","#c9a227","#7f8c9a"];
+
+  var MAX_RUBRIQUES_CONSEILLE = 10;
+
+  /* ---------- État ---------- */
+
+  var state = null;
+  var ui = { screen:"loading", modal:null, modalData:{} };
+
+  function todayKey(){
+    var d = new Date();
+    var y = d.getFullYear();
+    var m = String(d.getMonth()+1).padStart(2,"0");
+    var day = String(d.getDate()).padStart(2,"0");
+    return y + "-" + m + "-" + day;
+  }
+
+  function defaultState(){
+    return {
+      version:1,
+      config:{
+        segment:null,
+        statutVehicule:null,      // 'proprietaire' | 'locataire'
+        dioulatchai:0,
+        rubriques:[],             // {id, nom, icone, couleur, actif, perso}
+        onboardingComplete:false
+      },
+      jours:{},                   // { 'AAAA-MM-JJ': {date, origine:'trepor', recette, charges:[]} }
+      dernierMontant:{}           // { rubriqueId: montant }
+    };
+  }
+
+  function loadState(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return defaultState();
+      var parsed = JSON.parse(raw);
+      if(!parsed || !parsed.config) return defaultState();
+      // fusion défensive si des clés manquent
+      var base = defaultState();
+      parsed.config = Object.assign(base.config, parsed.config);
+      parsed.jours = parsed.jours || {};
+      parsed.dernierMontant = parsed.dernierMontant || {};
+      return parsed;
+    }catch(e){
+      return defaultState();
+    }
+  }
+
+  function saveState(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }catch(e){
+      showToast("Sauvegarde impossible sur cet appareil.");
+    }
+  }
+
+  function ensureJour(key){
+    if(!state.jours[key]){
+      state.jours[key] = { date:key, origine:"trepor", recette:null, charges:[] };
+    }
+    return state.jours[key];
+  }
+
+  /* ---------- Utilitaires ---------- */
+
+  function formatFCFA(n){
+    n = Math.round(Number(n) || 0);
+    var neg = n < 0;
+    n = Math.abs(n);
+    var s = String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    return (neg ? "-" : "") + s + " F";
+  }
+
+  function parseAmountInput(str){
+    if(str === null || str === undefined) return 0;
+    var cleaned = String(str).replace(/[^\d]/g, "");
+    if(cleaned === "") return 0;
+    return parseInt(cleaned, 10);
+  }
+
+  function spacedDigits(val){
+    var digits = String(val==null?"":val).replace(/[^\d]/g, "");
+    if(digits === "") return "";
+    return digits.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  }
+
+  // Reformate un champ montant avec des espaces de milliers pendant la saisie.
+  function attachAmountInput(input, onChange){
+    if(!input) return;
+    input.addEventListener("input", function(){
+      var digits = input.value.replace(/[^\d]/g, "");
+      var formatted = spacedDigits(digits);
+      input.value = formatted;
+      try{ input.setSelectionRange(formatted.length, formatted.length); }catch(e){}
+      if(onChange) onChange(digits ? parseInt(digits,10) : 0, formatted);
+    });
+  }
+
+  var JOURS_FR = ["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
+  var MOIS_FR = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+
+  function formatDateLongue(d){
+    return JOURS_FR[d.getDay()] + " " + d.getDate() + " " + MOIS_FR[d.getMonth()] + " " + d.getFullYear();
+  }
+
+  function uid(prefix){
+    return (prefix||"id") + "_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2,7);
+  }
+
+  function el(html){
+    var t = document.createElement("template");
+    t.innerHTML = html.trim();
+    return t.content.firstElementChild;
+  }
+
+  function esc(str){
+    return String(str==null?"":str)
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+
+  var toastTimer = null;
+  function showToast(msg){
+    var existing = document.querySelector(".toast");
+    if(existing) existing.remove();
+    var t = el('<div class="toast">'+esc(msg)+'</div>');
+    document.body.appendChild(t);
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ t.remove(); }, 2200);
+  }
+
+  /* ---------- Rendu principal ---------- */
+
+  var app = document.getElementById("app");
+
+  function render(){
+    if(!state.config.onboardingComplete){
+      renderOnboarding();
+    } else {
+      renderAccueil();
+    }
+    renderModal();
+  }
+
+  /* ===================== ONBOARDING ===================== */
+
+  function renderOnboarding(){
+    var step = ui.screen === "onb2" ? 2 : (ui.screen === "onb3" ? 3 : 1);
+
+    var stepsHtml = '<div class="onb-steps">' +
+      [1,2,3].map(function(i){
+        return '<div class="onb-step-dot '+(i<=step?"done":"")+'"></div>';
+      }).join("") + '</div>';
+
+    var body = "";
+    if(step === 1) body = onbStep1();
+    else if(step === 2) body = onbStep2();
+    else body = onbStep3();
+
+    app.innerHTML = '<div class="onb">' + stepsHtml + body + '</div>';
+    attachOnboardingEvents(step);
+  }
+
+  function onbStep1(){
+    var cfg = state.config;
+    var cards = SEGMENTS.map(function(s){
+      var sel = cfg.segment === s.id ? "selected" : "";
+      return '<div class="choice-card '+sel+'" data-segment="'+s.id+'">' +
+        '<span class="emoji">'+s.emoji+'</span><span>'+esc(s.nom)+'</span></div>';
+    }).join("");
+
+    return '' +
+      '<p class="onb-eyebrow">Étape 1 sur 3</p>' +
+      '<h1 class="onb-title">Quel est votre activité ?</h1>' +
+      '<p class="onb-sub">On adapte les rubriques de charges à votre métier.</p>' +
+      '<div class="onb-grid">'+cards+'</div>' +
+      '<div class="onb-spacer"></div>' +
+      '<button class="btn btn-primary" id="onb1-next" '+(cfg.segment?"":"disabled")+'>Continuer</button>';
+  }
+
+  function onbStep2(){
+    var cfg = state.config;
+    var isLoc = cfg.statutVehicule === "locataire";
+    var isProp = cfg.statutVehicule === "proprietaire";
+
+    var dioulatchaiField = "";
+    if(isLoc){
+      dioulatchaiField = '' +
+        '<p class="field-label">Montant habituel du dioulatchai</p>' +
+        '<div class="amount-input-wrap">' +
+          '<input type="text" inputmode="numeric" id="dioulatchai-input" placeholder="0" value="'+(cfg.dioulatchai?spacedDigits(cfg.dioulatchai):"")+'">' +
+          '<span class="suffix">F</span>' +
+        '</div>' +
+        '<p class="field-help">La part que vous versez au propriétaire chaque jour. Elle sera proposée par défaut à chaque saisie, vous pourrez toujours la modifier.</p>';
+    }
+
+    return '' +
+      '<p class="onb-eyebrow">Étape 2 sur 3</p>' +
+      '<h1 class="onb-title">Votre véhicule</h1>' +
+      '<p class="onb-sub">Cela détermine si le dioulatchai fait partie de vos charges.</p>' +
+      '<div class="choice-row">' +
+        '<div class="choice-card '+(isProp?"selected":"")+'" data-statut="proprietaire">' +
+          '<span class="emoji">🚙</span><span>Je suis propriétaire du véhicule</span></div>' +
+        '<div class="choice-card '+(isLoc?"selected":"")+'" data-statut="locataire">' +
+          '<span class="emoji">🔑</span><span>Je suis locataire (je verse le dioulatchai)</span></div>' +
+      '</div>' +
+      dioulatchaiField +
+      '<div class="onb-spacer"></div>' +
+      '<div class="btn-row">' +
+        '<button class="btn btn-ghost" id="onb2-back">Retour</button>' +
+        '<button class="btn btn-primary" id="onb2-next" '+(cfg.statutVehicule?"":"disabled")+'>Continuer</button>' +
+      '</div>';
+  }
+
+  function onbStep3(){
+    var cfg = state.config;
+    var actifs = cfg.rubriques.filter(function(r){return r.actif;}).length;
+
+    var rows = cfg.rubriques.map(function(r){
+      return renderRubriqueRow(r);
+    }).join("");
+
+    var warn = actifs > MAX_RUBRIQUES_CONSEILLE
+      ? '<div class="warn-msg">Trop de rubriques tue le suivi.</div>'
+      : "";
+
+    var persoForm = ui.modal === "perso-inline" ? renderPersoForm("onb3") : "";
+
+    return '' +
+      '<p class="onb-eyebrow">Étape 3 sur 3</p>' +
+      '<h1 class="onb-title">Vos rubriques de charges</h1>' +
+      '<p class="onb-sub">Décochez ce qui ne vous concerne pas. Vous pourrez changer cela plus tard.</p>' +
+      warn +
+      '<div class="rub-list">'+rows+'</div>' +
+      persoForm +
+      (ui.modal === "perso-inline" ? "" : '<div class="add-rub-btn" id="onb3-add-perso">＋ Ajouter une rubrique personnalisée</div>') +
+      '<div class="onb-spacer"></div>' +
+      '<div class="btn-row">' +
+        '<button class="btn btn-ghost" id="onb3-back">Retour</button>' +
+        '<button class="btn btn-primary" id="onb3-finish">Terminer la configuration</button>' +
+      '</div>';
+  }
+
+  function renderRubriqueRow(r){
+    var on = r.actif ? "on" : "";
+    return '<div class="rub-row '+on+'" style="--rub-color:'+r.couleur+'" data-rub-toggle="'+r.id+'">' +
+      '<div class="rub-icon" style="background:'+r.couleur+'">'+r.icone+'</div>' +
+      '<div class="rub-name">'+esc(r.nom)+(r.perso?'<span class="rub-note">Rubrique personnalisée</span>':'')+'</div>' +
+      '<div class="switch '+on+'"></div>' +
+      '</div>';
+  }
+
+  function renderPersoForm(context){
+    var d = ui.modalData;
+    var emojiGrid = EMOJI_CHOICES.map(function(e){
+      var sel = d.icone === e ? "selected" : "";
+      return '<div class="emoji-opt '+sel+'" data-emoji="'+e+'">'+e+'</div>';
+    }).join("");
+    var colorGrid = COLOR_CHOICES.map(function(c){
+      var sel = d.couleur === c ? "selected" : "";
+      return '<div class="color-opt '+sel+'" style="background:'+c+'" data-color="'+c+'"></div>';
+    }).join("");
+
+    return '' +
+      '<div class="perso-form" data-context="'+context+'">' +
+        '<p class="field-label" style="margin:0;">Nom de la rubrique</p>' +
+        '<input type="text" class="text-input" id="perso-nom" placeholder="Ex. : Eau, Nourriture..." value="'+esc(d.nom||"")+'" maxlength="30">' +
+        '<p class="field-label" style="margin:0;">Icône</p>' +
+        '<div class="emoji-grid">'+emojiGrid+'</div>' +
+        '<input type="text" class="text-input" id="perso-emoji-custom" placeholder="Ou collez votre propre emoji" maxlength="4" value="'+ (d.emojiCustom||"") +'">' +
+        '<p class="field-label" style="margin:0;">Couleur</p>' +
+        '<div class="color-grid">' + colorGrid +
+          '<div class="color-custom-wrap"><input type="color" id="perso-color-custom" value="'+(d.couleur||"#f5a623")+'"></div>' +
+        '</div>' +
+        '<div class="btn-row">' +
+          '<button class="btn btn-ghost btn-sm" id="perso-cancel">Annuler</button>' +
+          '<button class="btn btn-primary btn-sm" id="perso-save">Ajouter la rubrique</button>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function attachOnboardingEvents(step){
+    if(step === 1){
+      app.querySelectorAll("[data-segment]").forEach(function(node){
+        node.addEventListener("click", function(){
+          state.config.segment = node.getAttribute("data-segment");
+          saveState();
+          renderOnboarding();
+        });
+      });
+      var next = document.getElementById("onb1-next");
+      if(next) next.addEventListener("click", function(){
+        ui.screen = "onb2";
+        render();
+      });
+    }
+
+    if(step === 2){
+      app.querySelectorAll("[data-statut]").forEach(function(node){
+        node.addEventListener("click", function(){
+          state.config.statutVehicule = node.getAttribute("data-statut");
+          saveState();
+          renderOnboarding();
+          var input = document.getElementById("dioulatchai-input");
+          if(input) input.focus();
+        });
+      });
+      var dInput = document.getElementById("dioulatchai-input");
+      attachAmountInput(dInput, function(value){
+        state.config.dioulatchai = value;
+      });
+      var back = document.getElementById("onb2-back");
+      if(back) back.addEventListener("click", function(){ ui.screen="onb1"; render(); });
+      var next2 = document.getElementById("onb2-next");
+      if(next2) next2.addEventListener("click", function(){
+        saveState();
+        // initialise les rubriques par défaut si pas encore fait
+        if(state.config.rubriques.length === 0){
+          state.config.rubriques = RUBRIQUES_DEFAUT.map(function(r){
+            var actif;
+            if(r.parDefautLocataire === null) actif = false;
+            else if(r.parDefautLocataire === true) actif = state.config.statutVehicule === "locataire";
+            else actif = true;
+            return { id:r.id, nom:r.nom, icone:r.icone, couleur:r.couleur, actif:actif, perso:false };
+          });
+        } else {
+          // met à jour dioulatchai si le statut a changé entre deux visites
+          var dioul = state.config.rubriques.find(function(r){return r.id==="dioulatchai";});
+          if(dioul) dioul.actif = state.config.statutVehicule === "locataire";
+        }
+        saveState();
+        ui.screen = "onb3";
+        render();
+      });
+    }
+
+    if(step === 3){
+      app.querySelectorAll("[data-rub-toggle]").forEach(function(node){
+        node.addEventListener("click", function(){
+          var id = node.getAttribute("data-rub-toggle");
+          var r = state.config.rubriques.find(function(x){return x.id===id;});
+          if(r){ r.actif = !r.actif; saveState(); renderOnboarding(); }
+        });
+      });
+      var addBtn = document.getElementById("onb3-add-perso");
+      if(addBtn) addBtn.addEventListener("click", function(){
+        ui.modal = "perso-inline";
+        ui.modalData = { nom:"", icone:"", emojiCustom:"", couleur:COLOR_CHOICES[0] };
+        renderOnboarding();
+      });
+      attachPersoFormEvents(function(){ renderOnboarding(); }, false);
+      var back3 = document.getElementById("onb3-back");
+      if(back3) back3.addEventListener("click", function(){ ui.screen="onb2"; render(); });
+      var finish = document.getElementById("onb3-finish");
+      if(finish) finish.addEventListener("click", function(){
+        state.config.onboardingComplete = true;
+        saveState();
+        ui.screen = "accueil";
+        render();
+      });
+    }
+  }
+
+  function attachPersoFormEvents(onDone, fromChargeFlow){
+    var form = document.querySelector(".perso-form");
+    if(!form) return;
+
+    form.querySelectorAll("[data-emoji]").forEach(function(node){
+      node.addEventListener("click", function(){
+        ui.modalData.icone = node.getAttribute("data-emoji");
+        ui.modalData.emojiCustom = "";
+        rerenderCurrentPersoHost();
+      });
+    });
+    form.querySelectorAll("[data-color]").forEach(function(node){
+      node.addEventListener("click", function(){
+        ui.modalData.couleur = node.getAttribute("data-color");
+        rerenderCurrentPersoHost();
+      });
+    });
+    var nomInput = document.getElementById("perso-nom");
+    if(nomInput){
+      nomInput.addEventListener("input", function(){ ui.modalData.nom = nomInput.value; });
+    }
+    var emojiCustom = document.getElementById("perso-emoji-custom");
+    if(emojiCustom){
+      emojiCustom.addEventListener("input", function(){
+        ui.modalData.emojiCustom = emojiCustom.value;
+        ui.modalData.icone = "";
+      });
+    }
+    var colorCustom = document.getElementById("perso-color-custom");
+    if(colorCustom){
+      colorCustom.addEventListener("input", function(){
+        ui.modalData.couleur = colorCustom.value;
+      });
+    }
+    var cancel = document.getElementById("perso-cancel");
+    if(cancel) cancel.addEventListener("click", function(){
+      ui.modal = null;
+      ui.modalData = {};
+      onDone();
+    });
+    var save = document.getElementById("perso-save");
+    if(save) save.addEventListener("click", function(){
+      var nom = (ui.modalData.nom||"").trim();
+      if(!nom){ showToast("Donnez un nom à la rubrique."); return; }
+      var icone = ui.modalData.emojiCustom ? ui.modalData.emojiCustom.trim() : ui.modalData.icone;
+      if(!icone) icone = "🏷️";
+      var couleur = ui.modalData.couleur || COLOR_CHOICES[0];
+      var nouvelle = { id:uid("perso"), nom:nom, icone:icone, couleur:couleur, actif:true, perso:true };
+      state.config.rubriques.push(nouvelle);
+      saveState();
+      if(fromChargeFlow){
+        // Enchaîne directement sur la saisie du montant pour cette nouvelle rubrique.
+        ui.modal = "montant-charge";
+        ui.modalData = { rubriqueId: nouvelle.id, montant:"" };
+        renderModal();
+      } else {
+        ui.modal = null;
+        ui.modalData = {};
+        onDone();
+      }
+      showToast("Rubrique ajoutée.");
+    });
+  }
+
+  function rerenderCurrentPersoHost(){
+    if(!state.config.onboardingComplete){
+      renderOnboarding();
+    } else {
+      renderModal();
+    }
+  }
+
+  /* ===================== ACCUEIL ===================== */
+
+  function renderAccueil(){
+    var key = todayKey();
+    var jour = ensureJour(key);
+    var recette = jour.recette;
+    var totalCharges = jour.charges.reduce(function(s,c){ return s + c.montant; }, 0);
+    var solde = (recette||0) - totalCharges;
+    var enPerte = recette !== null && solde < 0;
+
+    var seg = SEGMENTS.find(function(s){return s.id===state.config.segment;});
+
+    var soldeHtml;
+    if(recette === null){
+      soldeHtml = '' +
+        '<div class="solde-card">' +
+          '<p class="solde-label">Solde net du jour</p>' +
+          '<p class="solde-value" style="color:var(--text-dim); font-size:22px;">Saisissez d\'abord votre recette</p>' +
+        '</div>';
+    } else {
+      soldeHtml = '' +
+        '<div class="solde-card '+(enPerte?"perte":"")+'">' +
+          '<p class="solde-label">Solde net du jour</p>' +
+          '<p class="solde-value '+(enPerte?"neg":"")+'">'+formatFCFA(solde)+'</p>' +
+          (enPerte ? '<div class="perte-banner">Jour à perte : '+formatFCFA(Math.abs(solde))+'</div>' : '') +
+          '<div class="solde-sub">' +
+            '<div class="solde-sub-item"><div class="k">Recette</div><div class="v">'+formatFCFA(recette)+'</div></div>' +
+            '<div class="solde-sub-item"><div class="k">Charges</div><div class="v">'+formatFCFA(totalCharges)+'</div></div>' +
+          '</div>' +
+        '</div>';
+    }
+
+    var recetteBtnHtml = recette === null
+      ? '<div class="recette-btn" id="btn-recette"><span class="ic">💰</span><div class="lbl"><div class="t1">Recette du jour</div><div class="t2">Montant encaissé aujourd\'hui</div></div></div>'
+      : '<div class="recette-btn set" id="btn-recette"><span class="ic">💰</span><div class="lbl"><div class="t1">Recette du jour : '+formatFCFA(recette)+'</div><div class="t2">Toucher pour modifier</div></div></div>';
+
+    var chargesHtml;
+    if(jour.charges.length === 0){
+      chargesHtml = '<div class="empty-state">Aucune charge enregistrée aujourd\'hui.</div>';
+    } else {
+      chargesHtml = jour.charges.slice().reverse().map(function(c){
+        var r = state.config.rubriques.find(function(x){return x.id===c.rubriqueId;});
+        var nom = r ? r.nom : "Rubrique supprimée";
+        var icone = r ? r.icone : "🏷️";
+        var couleur = r ? r.couleur : "#7f8c9a";
+        return '' +
+          '<div class="charge-row">' +
+            '<div class="rub-icon" style="background:'+couleur+'">'+icone+'</div>' +
+            '<div class="charge-info"><div class="n">'+esc(nom)+'</div></div>' +
+            '<div class="charge-amount">'+formatFCFA(c.montant)+'</div>' +
+            '<button class="charge-del" data-del-charge="'+c.id+'">✕</button>' +
+          '</div>';
+      }).join("");
+    }
+
+    var html = '' +
+      '<div class="home-header">' +
+        '<div class="home-date">'+esc(formatDateLongue(new Date()))+'</div>' +
+        '<div class="home-greet">'+(seg?seg.emoji:"👋")+' Faire le point</div>' +
+      '</div>' +
+      soldeHtml +
+      recetteBtnHtml +
+      '<div class="charges-section">' +
+        '<div class="charges-title">Charges d\'aujourd\'hui</div>' +
+        chargesHtml +
+      '</div>' +
+      '<div class="fab-wrap"><button class="fab" id="btn-add-charge">＋</button></div>';
+
+    app.innerHTML = html;
+
+    document.getElementById("btn-recette").addEventListener("click", function(){
+      ui.modal = "recette";
+      ui.modalData = { montant: recette !== null ? String(recette) : "" };
+      renderModal();
+    });
+    document.getElementById("btn-add-charge").addEventListener("click", function(){
+      ui.modal = "choix-rubrique";
+      ui.modalData = {};
+      renderModal();
+    });
+    app.querySelectorAll("[data-del-charge]").forEach(function(node){
+      node.addEventListener("click", function(){
+        ui.modal = "confirm-suppr-charge";
+        ui.modalData = { chargeId: node.getAttribute("data-del-charge") };
+        renderModal();
+      });
+    });
+  }
+
+  /* ===================== MODALES ===================== */
+
+  function renderModal(){
+    var existing = document.querySelector(".modal-overlay");
+    if(existing) existing.remove();
+
+    if(!ui.modal || ui.modal === "perso-inline") return; // perso-inline s'affiche inline dans l'onboarding
+
+    var overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+
+    var sheetHtml = "";
+    if(ui.modal === "recette") sheetHtml = modalRecette();
+    else if(ui.modal === "choix-rubrique") sheetHtml = modalChoixRubrique();
+    else if(ui.modal === "montant-charge") sheetHtml = modalMontantCharge();
+    else if(ui.modal === "perso-modal") sheetHtml = '<div class="modal-handle"></div>' + renderPersoForm("modal");
+    else if(ui.modal === "confirm-suppr-charge") sheetHtml = modalConfirmSupprCharge();
+
+    overlay.innerHTML = '<div class="modal-sheet">' + sheetHtml + '</div>';
+    document.body.appendChild(overlay);
+
+    overlay.addEventListener("click", function(e){
+      if(e.target === overlay) closeModal();
+    });
+
+    if(ui.modal === "recette") attachModalRecetteEvents();
+    else if(ui.modal === "choix-rubrique") attachModalChoixRubriqueEvents();
+    else if(ui.modal === "montant-charge") attachModalMontantChargeEvents();
+    else if(ui.modal === "perso-modal") attachPersoFormEvents(function(){ renderModal(); }, true);
+    else if(ui.modal === "confirm-suppr-charge") attachModalConfirmSupprChargeEvents();
+  }
+
+  function closeModal(){
+    ui.modal = null;
+    ui.modalData = {};
+    renderModal();
+  }
+
+  function modalRecette(){
+    return '' +
+      '<div class="modal-handle"></div>' +
+      '<h2 class="modal-title">Recette du jour</h2>' +
+      '<p class="modal-sub">Le montant total encaissé aujourd\'hui.</p>' +
+      '<div class="amount-input-wrap">' +
+        '<input type="text" inputmode="numeric" id="modal-recette-input" placeholder="0" value="'+esc(spacedDigits(ui.modalData.montant))+'" autofocus>' +
+        '<span class="suffix">F</span>' +
+      '</div>' +
+      '<div style="height:18px"></div>' +
+      '<div class="btn-row">' +
+        '<button class="btn btn-ghost" id="modal-recette-cancel">Annuler</button>' +
+        '<button class="btn btn-primary" id="modal-recette-save">Valider</button>' +
+      '</div>';
+  }
+
+  function attachModalRecetteEvents(){
+    var input = document.getElementById("modal-recette-input");
+    if(input) input.focus();
+    attachAmountInput(input, function(value, formatted){ ui.modalData.montant = formatted; });
+    document.getElementById("modal-recette-cancel").addEventListener("click", closeModal);
+    document.getElementById("modal-recette-save").addEventListener("click", function(){
+      var montant = parseAmountInput(input ? input.value : ui.modalData.montant);
+      var jour = ensureJour(todayKey());
+      jour.recette = montant;
+      saveState();
+      closeModal();
+      renderAccueil();
+    });
+  }
+
+  function modalChoixRubrique(){
+    var actives = state.config.rubriques.filter(function(r){ return r.actif; });
+    var tiles = actives.map(function(r){
+      return '' +
+        '<div class="rub-tile" data-choose-rub="'+r.id+'">' +
+          '<div class="rub-icon" style="background:'+r.couleur+'">'+r.icone+'</div>' +
+          '<div class="name">'+esc(r.nom)+'</div>' +
+        '</div>';
+    }).join("");
+
+    var addTile = '' +
+      '<div class="rub-tile add-tile" id="tile-add-perso">' +
+        '<div class="rub-icon">＋</div>' +
+        '<div class="name">Nouvelle rubrique</div>' +
+      '</div>';
+
+    var emptyMsg = actives.length === 0
+      ? '<p class="modal-sub">Aucune rubrique active. Créez-en une pour commencer.</p>'
+      : '<p class="modal-sub">Choisissez la rubrique de la charge.</p>';
+
+    return '' +
+      '<div class="modal-handle"></div>' +
+      '<h2 class="modal-title">Ajouter une charge</h2>' +
+      emptyMsg +
+      '<div class="rub-grid">' + tiles + addTile + '</div>';
+  }
+
+  function attachModalChoixRubriqueEvents(){
+    app; // no-op ref
+    document.querySelectorAll("[data-choose-rub]").forEach(function(node){
+      node.addEventListener("click", function(){
+        var id = node.getAttribute("data-choose-rub");
+        var r = state.config.rubriques.find(function(x){return x.id===id;});
+        if(!r) return;
+        ui.modal = "montant-charge";
+        var dernier = state.dernierMontant[id];
+        ui.modalData = { rubriqueId:id, montant: dernier !== undefined ? String(dernier) : "" };
+        renderModal();
+      });
+    });
+    var addTile = document.getElementById("tile-add-perso");
+    if(addTile) addTile.addEventListener("click", function(){
+      ui.modal = "perso-modal";
+      ui.modalData = { nom:"", icone:"", emojiCustom:"", couleur:COLOR_CHOICES[0] };
+      renderModal();
+    });
+  }
+
+  function modalMontantCharge(){
+    var r = state.config.rubriques.find(function(x){return x.id===ui.modalData.rubriqueId;});
+    if(!r){ return '<div class="modal-handle"></div><p>Rubrique introuvable.</p>'; }
+    return '' +
+      '<div class="modal-handle"></div>' +
+      '<div class="selected-rub-banner">' +
+        '<div class="rub-icon" style="background:'+r.couleur+'">'+r.icone+'</div>' +
+        '<div class="name">'+esc(r.nom)+'</div>' +
+      '</div>' +
+      '<div class="amount-input-wrap">' +
+        '<input type="text" inputmode="numeric" id="modal-charge-input" placeholder="0" value="'+esc(spacedDigits(ui.modalData.montant))+'" autofocus>' +
+        '<span class="suffix">F</span>' +
+      '</div>' +
+      '<div style="height:18px"></div>' +
+      '<div class="btn-row">' +
+        '<button class="btn btn-ghost" id="modal-charge-cancel">Annuler</button>' +
+        '<button class="btn btn-primary" id="modal-charge-save">Valider</button>' +
+      '</div>';
+  }
+
+  function attachModalMontantChargeEvents(){
+    var input = document.getElementById("modal-charge-input");
+    if(input){ input.focus(); input.select(); }
+    attachAmountInput(input, function(value, formatted){ ui.modalData.montant = formatted; });
+    var cancel = document.getElementById("modal-charge-cancel");
+    if(cancel) cancel.addEventListener("click", closeModal);
+    var save = document.getElementById("modal-charge-save");
+    if(save) save.addEventListener("click", function(){
+      var montant = parseAmountInput(input ? input.value : ui.modalData.montant);
+      var rubriqueId = ui.modalData.rubriqueId;
+      var jour = ensureJour(todayKey());
+      jour.charges.push({ id:uid("charge"), rubriqueId:rubriqueId, montant:montant, ts:Date.now() });
+      state.dernierMontant[rubriqueId] = montant;
+      saveState();
+      closeModal();
+      renderAccueil();
+      showToast("Charge ajoutée.");
+    });
+  }
+
+  function modalConfirmSupprCharge(){
+    return '' +
+      '<div class="modal-handle"></div>' +
+      '<div class="confirm-box">' +
+        '<h2 class="modal-title">Supprimer cette charge ?</h2>' +
+        '<p>Cette action ne peut pas être annulée.</p>' +
+        '<div class="btn-row" style="margin-top:10px;">' +
+          '<button class="btn btn-ghost" id="confirm-suppr-non">Non</button>' +
+          '<button class="btn btn-danger-ghost" id="confirm-suppr-oui">Supprimer</button>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function attachModalConfirmSupprChargeEvents(){
+    document.getElementById("confirm-suppr-non").addEventListener("click", closeModal);
+    document.getElementById("confirm-suppr-oui").addEventListener("click", function(){
+      var jour = ensureJour(todayKey());
+      var chargeId = ui.modalData.chargeId;
+      jour.charges = jour.charges.filter(function(c){ return c.id !== chargeId; });
+      saveState();
+      closeModal();
+      renderAccueil();
+    });
+  }
+
+  /* ---------- Démarrage ---------- */
+
+  state = loadState();
+  render();
+
+  // Service worker (mode hors ligne)
+  if("serviceWorker" in navigator){
+    window.addEventListener("load", function(){
+      navigator.serviceWorker.register("./sw.js").catch(function(){});
+    });
+  }
+})();
+</script>
+</body>
+</html>

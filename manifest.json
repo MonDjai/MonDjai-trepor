@@ -1,0 +1,29 @@
+{
+  "name": "MonDjai/Trépor",
+  "short_name": "Trépor",
+  "description": "Le point du jour, en 30 secondes. Recette, charges et solde net pour les chauffeurs de Côte d'Ivoire.",
+  "id": "/mondjai-trepor/",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "lang": "fr",
+  "dir": "ltr",
+  "background_color": "#11141a",
+  "theme_color": "#11141a",
+  "categories": ["finance", "productivity"],
+  "icons": [
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
