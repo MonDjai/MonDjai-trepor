@@ -1,0 +1,3700 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MonDjai — Budget par enveloppes</title>
+<meta name="description" content="MonDjai : le budget personnel par enveloppes, en FCFA.">
+<meta name="theme-color" content="#0F1218">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MonDjai">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icon-512.png">
+<link rel="apple-touch-icon" href="./icon-512.png">
+<style>
+/* ============================================================
+   MonDjai — feuille de style (tout est dans ce fichier)
+   ============================================================ */
+:root{
+  color-scheme:dark;
+  --bg:#0F1218;
+  --surface:#171C25;
+  --surface-2:#1F2632;
+  --line:#2A323F;
+  --text:#ECEFF5;
+  --muted:#98A2B4;
+  --gold:#F2A93B;
+  --gold-soft:rgba(242,169,59,.13);
+  --green:#3FB27F;
+  --green-soft:rgba(63,178,127,.13);
+  --orange:#E8901F;
+  --orange-soft:rgba(232,144,31,.14);
+  --red:#E5484D;
+  --red-soft:rgba(229,72,77,.13);
+  --r:14px;
+  --pad:16px;
+  --clavier:0px;
+  --navh:0px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-size:16px;
+  line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+  -webkit-text-size-adjust:100%;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:6px}
+
+/* --- structure --- */
+.app{max-width:560px;margin:0 auto;padding:0 var(--pad)}
+header.top{
+  position:sticky;top:0;z-index:20;background:rgba(15,18,24,.92);
+  backdrop-filter:blur(8px);border-bottom:1px solid var(--line);
+  padding-top:env(safe-area-inset-top);
+}
+.top-in{max-width:560px;margin:0 auto;padding:12px var(--pad);display:flex;align-items:baseline;gap:10px}
+.mark{font-weight:800;letter-spacing:-.03em;font-size:19px}
+.mark em{font-style:normal;color:var(--gold)}
+.eyebrow{
+  font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
+  font-weight:700;margin-left:auto
+}
+main{padding-top:20px;padding-bottom:calc(120px + var(--navh))}
+body.avec-onglets main{padding-bottom:calc(120px + var(--navh) + 78px)}
+
+h1{font-size:24px;line-height:1.2;letter-spacing:-.02em;margin:0 0 6px;font-weight:800}
+.sub{color:var(--muted);font-size:14px;margin:0 0 22px}
+h2{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:26px 0 10px;font-weight:700}
+
+/* --- blocs --- */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.card + .card{margin-top:10px}
+.num{font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.big{font-size:30px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.tiny{font-size:12px}
+
+/* --- boutons --- */
+.btn{
+  border:1px solid var(--line);background:var(--surface-2);color:var(--text);
+  border-radius:11px;padding:12px 14px;font-weight:600;font-size:15px;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%
+}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:var(--gold);color:#141414;border-color:var(--gold);font-weight:700}
+.btn-primary[disabled]{opacity:.35;pointer-events:none}
+.btn-ghost{background:transparent}
+.btn-line{width:auto;padding:9px 12px;font-size:14px;border-radius:10px}
+.btn-danger{color:var(--red);border-color:rgba(229,72,77,.35);background:transparent}
+.row-btns{display:flex;gap:8px}
+.row-btns .btn{flex:1}
+
+/* --- jour de salaire --- */
+.jours{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.jour{
+  border:1px solid var(--line);background:var(--surface);border-radius:9px;
+  padding:0;height:40px;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--muted)
+}
+.jour[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:#141414;font-weight:800}
+.jour-dernier{margin-top:8px}
+.jour-dernier[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:#141414}
+
+/* --- champs --- */
+.ligne{
+  display:flex;align-items:center;gap:10px;background:var(--surface);
+  border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;margin-bottom:8px
+}
+.ligne .lib{
+  flex:1;min-width:0;background:transparent;border:0;padding:6px 0;font-size:15px;font-weight:600
+}
+.ligne .lib::placeholder{color:var(--muted);font-weight:500}
+
+/* --- Sprint 5B : date propre à un revenu (jamais celle du salaire) --- */
+.champ-date{
+  display:flex;align-items:center;gap:8px;margin:-4px 0 8px 4px
+}
+.champ-date .input-date{
+  background:var(--surface-2);border:1px solid var(--line);border-radius:9px;
+  padding:6px 8px;font-size:13px;color:var(--text)
+}
+
+.money{
+  width:130px;text-align:right;background:var(--surface-2);border:1px solid var(--line);
+  border-radius:9px;padding:9px 10px;font-variant-numeric:tabular-nums;font-weight:700;font-size:15px
+}
+.money:focus{border-color:var(--gold);outline:none}
+.money.vide{color:var(--muted);font-weight:600}
+.del{
+  background:transparent;border:0;color:var(--muted);font-size:20px;line-height:1;
+  padding:6px 2px;width:28px;flex:none
+}
+.total-ligne{display:flex;align-items:baseline;justify-content:space-between;margin-top:14px;padding-top:14px;border-top:1px dashed var(--line)}
+
+/* --- menu ajout revenu --- */
+.menu{margin-top:8px;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--surface)}
+.menu button{display:block;width:100%;text-align:left;background:transparent;border:0;padding:13px 14px;font-size:15px}
+.menu button + button{border-top:1px solid var(--line)}
+
+/* --- rubriques --- */
+.rub{
+  display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  padding:11px 12px;margin-bottom:8px
+}
+.rub[aria-pressed="true"]{border-color:rgba(242,169,59,.5);background:var(--gold-soft)}
+.ico{
+  width:36px;height:36px;flex:none;border-radius:10px;display:grid;place-items:center;
+  font-size:18px;background:var(--surface-2)
+}
+.rub .nom{flex:1;min-width:0;font-weight:600;font-size:15px;white-space:normal;word-break:break-word}
+.check{
+  width:22px;height:22px;flex:none;border-radius:7px;border:1.5px solid var(--line);
+  display:grid;place-items:center;font-size:13px;color:transparent
+}
+.rub[aria-pressed="true"] .check{background:var(--gold);border-color:var(--gold);color:#141414;font-weight:900}
+.perso-tag{font-size:11px;color:var(--muted);flex:none}
+
+/* --- formulaire rubrique perso --- */
+.field{margin-bottom:12px}
+.field label{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:6px}
+.input,select.input{
+  width:100%;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:11px 12px;font-size:15px
+}
+.input:focus{border-color:var(--gold);outline:none}
+.swatches{display:flex;flex-wrap:wrap;gap:8px}
+.sw{width:34px;height:34px;border-radius:10px;border:2px solid transparent}
+.sw[aria-pressed="true"]{border-color:var(--text)}
+.emojis{display:flex;flex-wrap:wrap;gap:6px}
+.em{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);font-size:18px}
+.em[aria-pressed="true"]{border-color:var(--gold);background:var(--gold-soft)}
+
+/* --- répartition --- */
+.repart{
+  display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);
+  border-left:3px solid var(--line);border-radius:var(--r);padding:10px 12px;margin-bottom:8px
+}
+.repart .nom{flex:1;min-width:0;font-weight:600;font-size:15px;white-space:normal;word-break:break-word}
+.repart .pct{display:block;font-weight:500;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.reste-ici{
+  background:transparent;border:1px solid var(--line);border-radius:9px;color:var(--muted);
+  font-size:11px;font-weight:700;padding:7px 8px;flex:none;letter-spacing:.04em
+}
+
+/* --- jauge (élément signature) --- */
+.jauge-wrap{margin:2px 0 10px}
+.jauge{
+  display:flex;height:10px;border-radius:99px;overflow:hidden;background:var(--surface-2);
+  border:1px solid var(--line)
+}
+.seg{height:100%;flex:none;transition:width .18s ease}
+.seg-vide{
+  flex:1;background:repeating-linear-gradient(135deg,transparent 0 5px,rgba(255,255,255,.06) 5px 10px)
+}
+
+/* --- barre collante --- */
+.sticky{
+  position:fixed;left:0;right:0;bottom:var(--clavier);z-index:30;
+  background:rgba(15,18,24,.94);backdrop-filter:blur(10px);
+  border-top:1px solid var(--line);
+  padding:12px var(--pad) calc(12px + env(safe-area-inset-bottom));
+  transition:bottom .1s ease
+}
+.sticky-in{max-width:560px;margin:0 auto}
+.reste-line{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:10px}
+.reste-line .lab{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.reste-val{font-size:26px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1.1}
+.deficit{color:var(--red)}
+.ok{color:var(--green)}
+.banner{
+  background:var(--red-soft);border:1px solid rgba(229,72,77,.35);color:var(--red);
+  border-radius:11px;padding:11px 12px;font-weight:700;font-size:14px;margin-bottom:10px
+}
+.doux{
+  background:var(--gold-soft);border:1px solid rgba(242,169,59,.3);color:var(--gold);
+  border-radius:11px;padding:10px 12px;font-size:13px;font-weight:600;margin-bottom:10px
+}
+
+/* --- tableau de bord --- */
+.tb-tete{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:14px}
+.tb-ligne{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.tb-ligne:last-child{border-bottom:0}
+.pastille{width:10px;height:10px;border-radius:99px;flex:none}
+.tb-ligne .nom{flex:1;min-width:0;font-weight:600;font-size:15px;white-space:normal;word-break:break-word}
+.tb-mont{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+.tb-mont small{display:block;font-weight:500;font-size:12px;color:var(--muted)}
+.vide-msg{color:var(--muted);font-size:14px;padding:14px 0}
+
+/* --- Sprint 2 : jauges par rubrique --- */
+.jauge-r{height:9px;border-radius:99px;background:var(--surface-2);border:1px solid var(--line);overflow:hidden}
+.jauge-r > i{display:block;height:100%;border-radius:99px;transition:width .2s ease;min-width:0}
+.env{
+  display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r);padding:12px;margin-bottom:8px
+}
+.env:active{transform:translateY(1px)}
+.env.alerte{border-color:rgba(229,72,77,.4)}
+.env-haut{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.env-haut .nom{flex:1;min-width:0;font-weight:600;font-size:15px;white-space:normal;word-break:break-word}
+.env-mont{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;flex:none}
+.env-mont small{display:block;font-weight:500;font-size:12px;color:var(--muted)}
+.env-bas{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-top:7px;font-size:12px;font-variant-numeric:tabular-nums}
+.c-vert{color:var(--green)}
+.c-orange{color:var(--orange)}
+.c-rouge{color:var(--red)}
+.c-neutre{color:var(--muted)}
+.chev{color:var(--muted);font-size:18px;flex:none;line-height:1}
+.tag{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:99px;padding:2px 7px;flex:none}
+
+/* --- bouton flottant « + » --- */
+.fab{
+  position:fixed;z-index:45;right:20px;bottom:calc(22px + env(safe-area-inset-bottom));
+  width:62px;height:62px;border-radius:99px;border:0;background:var(--gold);color:#141414;
+  font-size:32px;font-weight:800;line-height:1;display:grid;place-items:center;
+  box-shadow:0 8px 24px rgba(0,0,0,.45)
+}
+.fab:active{transform:translateY(1px)}
+@media (min-width:620px){ .fab{right:calc(50% - 280px + 8px)} }
+body.avec-onglets .fab{bottom:calc(78px + var(--navh) + env(safe-area-inset-bottom))}
+
+/* --- Sprint 5A : menu de navigation fixe en bas --- */
+.nav-tabs{
+  position:fixed;left:0;right:0;bottom:0;z-index:50;
+  display:none;
+  background:rgba(15,18,24,.96);backdrop-filter:blur(10px);
+  border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom)
+}
+body.avec-onglets .nav-tabs{display:block}
+.nav-tabs-in{
+  max-width:560px;margin:0 auto;display:flex;align-items:stretch
+}
+.nav-tab{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  background:transparent;border:0;color:var(--muted);padding:9px 2px 8px;min-width:0
+}
+.nav-tab .nav-ic{font-size:21px;line-height:1}
+.nav-tab .nav-lab{font-size:10.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.nav-tab[aria-current="true"]{color:var(--gold)}
+.nav-tab:active{opacity:.7}
+
+/* --- feuille plein écran (saisie de dépense) --- */
+.sheet{position:fixed;inset:0;z-index:60;background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch}
+.sheet-top{
+  position:sticky;top:0;z-index:2;background:rgba(15,18,24,.96);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top)
+}
+.sheet-top-in{max-width:560px;margin:0 auto;padding:10px var(--pad);display:flex;align-items:center;gap:10px}
+.sheet-titre{font-weight:800;font-size:17px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.icon-btn{
+  width:38px;height:38px;flex:none;border-radius:11px;border:1px solid var(--line);
+  background:var(--surface-2);display:grid;place-items:center;font-size:19px;line-height:1;padding:0
+}
+.sheet-body{max-width:560px;margin:0 auto;padding:18px var(--pad) 120px}
+
+.grille-rub{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.tuile{
+  display:flex;flex-direction:column;align-items:center;gap:6px;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;padding:12px 6px 10px;min-height:104px
+}
+.tuile:active{transform:translateY(1px)}
+.tuile .ico{width:44px;height:44px;font-size:22px}
+.tuile .t-nom{
+  font-size:11.5px;line-height:1.15;font-weight:600;text-align:center;width:100%;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden
+}
+.tuile .jauge-r{width:100%;height:5px;margin-top:auto}
+
+.montant-xl{
+  width:100%;background:transparent;border:0;border-bottom:2px solid var(--line);
+  font-size:40px;font-weight:800;letter-spacing:-.03em;text-align:center;
+  font-variant-numeric:tabular-nums;padding:4px 0 8px
+}
+.montant-xl:focus{border-bottom-color:var(--gold);outline:none}
+.devise{text-align:center;color:var(--muted);font-size:13px;font-weight:700;letter-spacing:.14em;margin:6px 0 18px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{
+  border:1px solid var(--line);background:var(--surface-2);border-radius:99px;
+  padding:9px 13px;font-size:13px;font-weight:600
+}
+.chip[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:#141414}
+.info-env{
+  border-radius:11px;padding:10px 12px;font-size:13px;font-weight:600;margin:0 0 16px;
+  background:var(--surface);border:1px solid var(--line);color:var(--muted)
+}
+.info-env.vert{background:var(--green-soft);border-color:rgba(63,178,127,.3);color:var(--green)}
+.info-env.orange{background:var(--orange-soft);border-color:rgba(232,144,31,.3);color:var(--orange)}
+.info-env.rouge{background:var(--red-soft);border-color:rgba(229,72,77,.3);color:var(--red)}
+.rub-choisie{
+  display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r);padding:10px 12px;margin-bottom:18px;width:100%;text-align:left
+}
+.rub-choisie .nom{flex:1;min-width:0;font-weight:700;font-size:15px;white-space:normal;word-break:break-word}
+.rub-choisie .chg{font-size:12px;color:var(--gold);font-weight:700;flex:none}
+
+/* --- liste des dépenses --- */
+.dep{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line)}
+.dep:last-child{border-bottom:0}
+.dep-main{
+  display:flex;align-items:center;gap:12px;flex:1;min-width:0;background:transparent;border:0;
+  padding:12px 0;text-align:left
+}
+.d-txt{flex:1;min-width:0}
+.d-lib{font-weight:600;font-size:15px;white-space:normal;word-break:break-word}
+.d-date{font-size:12px;color:var(--muted)}
+.d-mont{font-weight:700;font-variant-numeric:tabular-nums;flex:none}
+
+/* --- message de confirmation --- */
+.toast{
+  position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom));
+  z-index:90;background:var(--surface-2);border:1px solid var(--line);border-radius:99px;
+  padding:11px 18px;font-size:14px;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.45);
+  transition:opacity .25s ease
+}
+body.avec-onglets .toast{bottom:calc(150px + var(--navh) + env(safe-area-inset-bottom))}
+
+/* --- Sprint 3 : regroupement par groupe --- */
+.grp{margin:20px 0 9px}
+.grp-t{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:7px}
+.grp-nom{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
+.grp-mont{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;font-weight:600;flex:none}
+.grp .jauge-r{height:6px}
+
+/* --- Sprint 3 : avis (nouveau cycle, rappel de sauvegarde) --- */
+.avis{
+  background:var(--gold-soft);border:1px solid rgba(242,169,59,.35);
+  border-radius:var(--r);padding:13px 14px;margin-bottom:12px
+}
+.avis-t{font-weight:800;font-size:15px;color:var(--gold);margin-bottom:3px}
+.avis-p{margin:0 0 10px;font-size:13.5px;color:var(--muted);line-height:1.4}
+.avis .btn{margin-top:0}
+.avis .row-btns{margin-top:0}
+
+/* --- Sprint 3 : historique --- */
+.cyc{
+  display:block;width:100%;text-align:left;background:var(--surface);
+  border:1px solid var(--line);border-radius:var(--r);padding:13px;margin-bottom:8px
+}
+.cyc:active{transform:translateY(1px)}
+.cyc-h{display:flex;align-items:center;gap:8px}
+.cyc-per{font-weight:700;font-size:15px;flex:1;min-width:0}
+.cyc-g{display:flex;gap:16px;margin-top:9px}
+.cyc-g div{font-size:11.5px;color:var(--muted);letter-spacing:.04em}
+.cyc-g b{display:block;color:var(--text);font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.cyc-g b.c-rouge{color:var(--red)}
+.cyc-g b.c-vert{color:var(--green)}
+
+/* --- Sprint 3 : lignes en lecture seule --- */
+.ro{padding:11px 0;border-bottom:1px solid var(--line)}
+.ro:last-child{border-bottom:0}
+.ro-h{display:flex;align-items:center;gap:10px}
+.ro-h .nom{flex:1;min-width:0;font-weight:600;font-size:14.5px;white-space:normal;word-break:break-word}
+.ro-m{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;font-size:14.5px;flex:none}
+.ro-m small{display:block;font-weight:500;font-size:11.5px;color:var(--muted)}
+.ro-b{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-top:6px;font-size:12px;font-variant-numeric:tabular-nums}
+.ro .jauge-r{margin-top:7px}
+.ro .ico{width:30px;height:30px;font-size:15px}
+.lecture{
+  display:inline-block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);border:1px solid var(--line);border-radius:99px;padding:3px 9px;font-weight:700
+}
+
+/* ==============================================================
+   Sprint 4 — code d'accès, réglages, lissage, épargne valorisée
+   ============================================================== */
+:root{ --bleu:#5B9BD5; --bleu-soft:rgba(91,155,213,.14); }
+.c-attente{color:var(--bleu)}
+.btn[disabled]{opacity:.4;pointer-events:none}
+
+/* --- écran verrouillé + clavier du code --- */
+.verrou{display:flex;flex-direction:column;align-items:center;text-align:center;padding-top:26px}
+.verrou h1{margin-bottom:4px}
+.verrou .sub{margin-bottom:6px}
+.code-bloc{display:flex;flex-direction:column;align-items:center;width:100%}
+.points{display:flex;gap:16px;margin:16px 0 2px}
+.pt{width:14px;height:14px;border-radius:99px;border:1.5px solid var(--line);background:transparent}
+.pt.on{background:var(--gold);border-color:var(--gold)}
+.err-code{min-height:20px;margin:8px 0 0;font-size:13.5px;font-weight:600;color:var(--red)}
+.clav{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;max-width:290px;margin:14px auto 0}
+.tou{height:58px;border-radius:14px;border:1px solid var(--line);background:var(--surface);
+     font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.tou:active{transform:translateY(1px)}
+.tou-vide{border:0;background:transparent;pointer-events:none}
+.lien{background:transparent;border:0;color:var(--muted);font-size:13.5px;
+      text-decoration:underline;padding:14px 10px;margin-top:6px}
+
+/* --- écran Réglages --- */
+.regl{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:var(--surface);
+      border:1px solid var(--line);border-radius:var(--r);padding:13px 14px;margin-bottom:8px}
+.regl:active{transform:translateY(1px)}
+.regl-nom{font-weight:600;font-size:15px}
+.regl-sous{font-size:12.5px;color:var(--muted);margin-top:1px}
+
+/* --- gestion des rubriques : ligne + bouton modifier --- */
+.rub-row{display:flex;align-items:stretch;gap:8px;margin-bottom:8px}
+.rub-row .rub{flex:1;min-width:0;margin-bottom:0}
+.mini{width:46px;flex:none;border-radius:var(--r);border:1px solid var(--line);
+      background:var(--surface);font-size:16px;padding:0}
+
+/* --- assistant de lissage (F9) --- */
+.sous-ligne{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.lien-liss{background:transparent;border:0;padding:0;color:var(--gold);font-size:12px;
+           font-weight:700;text-align:left}
+.lissage{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;
+         padding:13px;margin:-2px 0 10px}
+.liss-t{font-weight:800;font-size:14px;margin-bottom:3px}
+.liss-p{margin:0 0 11px;font-size:12.5px;color:var(--muted);line-height:1.4}
+.liss-ligne{display:flex;align-items:center;gap:10px}
+.liss-lab{flex:1;font-size:13.5px;font-weight:600}
+.liss-res{font-size:13px;font-weight:700;color:var(--gold);margin:0 0 11px}
+
+/* --- épargne valorisée (F10) --- */
+.info-env.attente{background:var(--bleu-soft);border-color:rgba(91,155,213,.3);color:var(--bleu)}
+.avis-vert{background:var(--green-soft);border-color:rgba(63,178,127,.35)}
+.avis-vert .avis-t{color:var(--green)}
+.bravo{font-size:12.5px;font-weight:700;color:var(--green);margin-top:6px}
+
+/* --- à propos --- */
+.ap{padding:9px 0;display:flex;gap:9px;align-items:flex-start;font-size:14px;line-height:1.4}
+.ap span:first-child{flex:none}
+.mission{font-size:17px;font-weight:700;line-height:1.35;margin:0 0 6px}
+
+/* --- lien texte simple --- */
+.lien{background:transparent;border:0;color:var(--gold);font-weight:700;font-size:13px;padding:2px 0}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-in">
+    <span class="mark">Mon<em>Djai</em></span>
+    <span class="eyebrow" id="eyebrow"></span>
+  </div>
+</header>
+
+<main class="app" id="ecran"></main>
+<div id="barre"></div>
+<nav class="nav-tabs" id="onglets" role="navigation" aria-label="Navigation principale"></nav>
+
+<script>
+"use strict";
+/* ==============================================================
+   MonDjai — Sprint 5A
+   (Sprint 1 : jour de paie, revenus, rubriques, répartition)
+   (Sprint 2 : saisie de dépense en 3 taps, tableau de bord à
+    jauges, détail des dépenses par rubrique)
+   (Sprint 3 : cycles budgétaires, historique, sauvegarde et
+    restauration JSON, affichage par groupes)
+   (Sprint 4 : code d'accès, écran Réglages, assistant de
+    lissage, épargne valorisée, écran À propos)
+   (Sprint 5A : menu de navigation fixe en bas (Accueil ·
+    Enveloppes · Journal · Épargne · Réglages), accueil allégé,
+    correctifs clavier/défilement, textes qui ne sont plus
+    tronqués, bouton retour Android réparé sur tout l'écran)
+   (Sprint 5B — logique métier : répartition automatique
+    proportionnelle proposée si les revenus changent lors d'un
+    nouveau cycle ; dépenses prévues (« prévisions ») pour une
+    date future, non comptées avant validation, avec rappel sur
+    l'accueil ; date propre à chaque « autre revenu », distincte
+    de la date du salaire. L'export Excel arrive dans une
+    prochaine livraison.)
+   Tout est local : aucun appel réseau, aucune bibliothèque.
+   ============================================================== */
+
+/* ==============================================================
+   Rubriques préconfigurées — section F3 du cahier des charges V3.
+   defaut:true = cochée au premier lancement (✔ dans le document)
+   groupe      = stocké dès le Sprint 1, affiché à partir du Sprint 3
+   ============================================================== */
+var RUBRIQUES_F3 = [
+  /* --- Fixes --- */
+  {id:"loyer",       nom:"Loyer / Logement",              icone:"\uD83C\uDFE0", couleur:"#F2A93B", groupe:"Fixes", defaut:true},
+  {id:"famille",     nom:"Famille (soutien régulier)",    icone:"\uD83E\uDD1D", couleur:"#E0A44C", groupe:"Fixes", defaut:true},
+  {id:"eauelec",     nom:"Factures eau & électricité",    icone:"\uD83D\uDCA1", couleur:"#F2C94C", groupe:"Fixes", defaut:true},
+  {id:"creditdata",  nom:"Crédit & Data",                 icone:"\uD83D\uDCF1", couleur:"#E8B04B", groupe:"Fixes", defaut:true},
+  {id:"wifi",        nom:"Wifi maison",                   icone:"\uD83D\uDCF6", couleur:"#D9A05B", groupe:"Fixes", defaut:false},
+  {id:"gaz",         nom:"Gaz",                           icone:"\uD83D\uDD25", couleur:"#E5723B", groupe:"Fixes", defaut:false},
+  {id:"mensualites", nom:"Mensualités de crédit",         icone:"\uD83C\uDFE6", couleur:"#C89B5A", groupe:"Fixes", defaut:false},
+  {id:"scolarite",   nom:"Scolarité",                     icone:"\uD83C\uDF93", couleur:"#D4A76A", groupe:"Fixes", defaut:false},
+  {id:"assurances",  nom:"Assurances",                    icone:"\uD83D\uDEE1\uFE0F", couleur:"#BFA37A", groupe:"Fixes", defaut:false},
+
+  /* --- Vie courante --- */
+  {id:"nourrmaison", nom:"Nourriture maison",             icone:"\uD83C\uDF5A", couleur:"#56A8F5", groupe:"Vie courante", defaut:true},
+  {id:"nourrbureau", nom:"Nourriture bureau & divers",    icone:"\uD83C\uDF71", couleur:"#4A93E0", groupe:"Vie courante", defaut:true},
+  {id:"transport",   nom:"Transport",                     icone:"\uD83D\uDE95", couleur:"#5FC2C7", groupe:"Vie courante", defaut:true},
+  {id:"sante",       nom:"Santé",                         icone:"\uD83D\uDC8A", couleur:"#4FB3C9", groupe:"Vie courante", defaut:true},
+  {id:"entrmaison",  nom:"Entretien maison",              icone:"\uD83E\uDDFC", couleur:"#7FD1D6", groupe:"Vie courante", defaut:false},
+  {id:"pressing",    nom:"Pressing / Coiffure",           icone:"\uD83D\uDC87", couleur:"#5B8FD6", groupe:"Vie courante", defaut:false},
+  {id:"entrvehic",   nom:"Entretien véhicule",            icone:"\uD83D\uDD27", couleur:"#3E7FC1", groupe:"Vie courante", defaut:false},
+
+  /* --- Épargne & Investissement --- */
+  {id:"epargnetont", nom:"Épargne / Tontine",             icone:"\uD83D\uDC37", couleur:"#3FB27F", groupe:"Épargne & Investissement", defaut:true},
+  {id:"imprevus",    nom:"Fonds d'imprévus",              icone:"\uD83D\uDEDF", couleur:"#2E9E8F", groupe:"Épargne & Investissement", defaut:true},
+  {id:"epsecurite",  nom:"Épargne sécurité",              icone:"\uD83D\uDD12", couleur:"#57C08D", groupe:"Épargne & Investissement", defaut:false},
+  {id:"epprojets",   nom:"Épargne projets",               icone:"\uD83C\uDFAF", couleur:"#48A86E", groupe:"Épargne & Investissement", defaut:false},
+  {id:"investiss",   nom:"Investissements",               icone:"\uD83D\uDCC8", couleur:"#2F8F63", groupe:"Épargne & Investissement", defaut:false},
+
+  /* --- Social & Loisirs --- */
+  {id:"sorties",     nom:"Sorties / Loisirs",             icone:"\uD83C\uDF89", couleur:"#C77BE0", groupe:"Social & Loisirs", defaut:true},
+  {id:"contribsoc",  nom:"Contributions sociales",        icone:"\uD83C\uDF81", couleur:"#E07BA8", groupe:"Social & Loisirs", defaut:true},
+  {id:"aides",       nom:"Aides ponctuelles",             icone:"\uD83D\uDE4F", couleur:"#A79BE8", groupe:"Social & Loisirs", defaut:false},
+  {id:"abonnements", nom:"Abonnements (Netflix, sport…)", icone:"\uD83D\uDCFA", couleur:"#9B7BE0", groupe:"Social & Loisirs", defaut:false}
+];
+var GROUPES = ["Fixes","Vie courante","Épargne & Investissement","Social & Loisirs"];
+var MAX_DOUX = 12; /* F3 : message doux au-delà de 12 rubriques actives */
+
+var TYPES_REVENU = ["Activités secondaires","Prime","Autre"];
+var COULEURS = ["#F2A93B","#E5723B","#F2C94C","#56A8F5","#5FC2C7","#3E7FC1","#3FB27F","#2E9E8F","#C77BE0","#E07BA8"];
+var EMOJIS = ["🏠","🍚","🚕","💡","🚰","📱","💊","🎓","👕","🎉","🐖","🎯","🤝","🏦","🔄","🙏","🔥","🧼","💇","📺","🛡️","⚠️","🚗","✈️","🎁","📚","⚽","💼"];
+var MOIS = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+
+/* Sprint 4 — le groupe qui reçoit le traitement positif (F10) */
+var GROUPE_EPARGNE = "Épargne & Investissement";
+
+/* Sprint 4 — périodicités de l'assistant de lissage (F9) */
+var PERIODICITES = [
+  {cle:"mensuel",     label:"Mensuel",     mois:1,  par:"par mois"},
+  {cle:"bimestriel",  label:"Bimestriel",  mois:2,  par:"tous les 2 mois"},
+  {cle:"trimestriel", label:"Trimestriel", mois:3,  par:"par trimestre"},
+  {cle:"annuel",      label:"Annuel",      mois:12, par:"par an"}
+];
+
+var CLE = "mondjai.v2";
+var NBSP = "\u00A0";
+
+/* Sprint 5A — menu de navigation fixe en bas.
+   Uniquement les 5 écrans principaux ; les écrans secondaires
+   (détail d'une enveloppe, historique, à propos, éditions…)
+   gardent le bouton « ‹ retour » et masquent ce menu. */
+var ONGLETS = [
+  {v:"dashboard",  ic:"🏠", lab:"Accueil"},
+  {v:"enveloppes", ic:"📋", lab:"Enveloppes"},
+  {v:"journal",    ic:"📒", lab:"Journal"},
+  {v:"epargne",    ic:"💰", lab:"Épargne"},
+  {v:"reglages",   ic:"⚙️", lab:"Réglages"}
+];
+function estOnglet(v){ return ONGLETS.some(function(t){ return t.v === v; }); }
+
+/* ---------- utilitaires ---------- */
+function uid(){ return "r" + Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function fmt(n){
+  n = Math.round(Number(n) || 0);
+  var neg = n < 0; n = Math.abs(n);
+  return (neg ? "-" : "") + String(n).replace(/\B(?=(\d{3})+(?!\d))/g, NBSP);
+}
+function fmtF(n){ return fmt(n) + NBSP + "F"; }
+function pct(n){ return Math.round(Number(n)||0) + NBSP + "%"; }
+function chiffres(s){ var d = String(s).replace(/[^0-9]/g,""); return d ? parseInt(d,10) : 0; }
+function el(tag, cls, txt){
+  var e = document.createElement(tag);
+  if(cls) e.className = cls;
+  if(txt !== undefined && txt !== null) e.textContent = txt;
+  return e;
+}
+
+/* ---------- dates ---------- */
+function p2(n){ return (n < 10 ? "0" : "") + n; }
+function iso(d){ return d.getFullYear() + "-" + p2(d.getMonth()+1) + "-" + p2(d.getDate()); }
+function aujourdhui(){ return iso(new Date()); }
+function deIso(s){
+  var p = String(s || "").split("-");
+  var d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+  return isNaN(d.getTime()) ? new Date() : d;
+}
+function dateLisible(s){
+  if(s === aujourdhui()) return "Aujourd'hui";
+  var h = new Date(); h.setDate(h.getDate() - 1);
+  if(s === iso(h)) return "Hier";
+  var d = deIso(s);
+  var txt = d.getDate() + " " + MOIS[d.getMonth()];
+  if(d.getFullYear() !== new Date().getFullYear()) txt += " " + d.getFullYear();
+  return txt;
+}
+function dateCourte(s){
+  var d = deIso(s);
+  return d.getDate() + " " + MOIS[d.getMonth()].slice(0,4) + ".";
+}
+function dateComplete(s){
+  var d = deIso(s);
+  return d.getDate() + " " + MOIS[d.getMonth()] + " " + d.getFullYear();
+}
+/* Prochaine paie : le jour choisi, ramené au dernier jour si le mois est plus court.
+   Le jour peut être passé en paramètre (utile avant que l'état ne soit chargé). */
+function paieDuMois(annee, mois, jourOpt){
+  var dernier = new Date(annee, mois + 1, 0).getDate();
+  var js = (jourOpt === undefined) ? S.jourSalaire : jourOpt;
+  var j = (js === "dernier") ? dernier : Math.min(Number(js) || 1, dernier);
+  return new Date(annee, mois, j);
+}
+/* Sprint 3 — date de paie la plus récente à ce jour : début théorique du cycle */
+function debutCycleTheorique(jourOpt, refIso){
+  var t = refIso ? deIso(refIso) : new Date();
+  t.setHours(0,0,0,0);
+  var js = (jourOpt === undefined) ? S.jourSalaire : jourOpt;
+  if(js === null || js === undefined) return iso(t);
+  var c = paieDuMois(t.getFullYear(), t.getMonth(), js);
+  if(c.getTime() > t.getTime()) c = paieDuMois(t.getFullYear(), t.getMonth() - 1, js);
+  return iso(c);
+}
+/* Première date de paie strictement postérieure à une date donnée */
+function paieApres(dateIso){
+  var d = deIso(dateIso); d.setHours(0,0,0,0);
+  var c = paieDuMois(d.getFullYear(), d.getMonth());
+  if(c.getTime() <= d.getTime()) c = paieDuMois(d.getFullYear(), d.getMonth() + 1);
+  return c;
+}
+function prochainePaie(){
+  if(S.jourSalaire === null || S.jourSalaire === undefined) return null;
+  var t = new Date(); t.setHours(0,0,0,0);
+  var c = paieDuMois(t.getFullYear(), t.getMonth());
+  if(c.getTime() <= t.getTime()) c = paieDuMois(t.getFullYear(), t.getMonth() + 1);
+  return c;
+}
+function joursAvantPaie(){
+  var p = prochainePaie();
+  if(!p) return null;
+  var t = new Date(); t.setHours(0,0,0,0);
+  return Math.max(1, Math.round((p.getTime() - t.getTime()) / 86400000));
+}
+function motJours(n){ return n + (n > 1 ? " jours" : " jour"); }
+
+/* ==============================================================
+   ÉTAT
+   S.revenus, S.rubriques[].montant et S.depenses décrivent
+   TOUJOURS le cycle en cours. Les cycles clos sont recopiés
+   dans S.cycles, du plus récent au plus ancien.
+   ============================================================== */
+var S = charger();
+var vue = S.onboarded ? "dashboard" : "revenus";
+var rubOuverte = null;    /* id de la rubrique affichée en détail */
+var cycleOuvert = null;   /* id du cycle archivé consulté */
+var brouillonCycle = null;/* nouveau cycle en préparation */
+var deverrouille = !S.pin;/* Sprint 4 — tant que c'est faux, aucun montant n'est affiché */
+var retours = {};         /* Sprint 4 — d'où l'on vient, pour le bouton retour */
+
+function neuf(){
+  return {
+    version: 6,
+    onboarded: false,
+    jourSalaire: null,
+    revenus: [{id: uid(), libelle: "Salaire net", montant: 0, date: null}],
+    rubriques: RUBRIQUES_F3.map(function(r){
+      return {id:r.id, nom:r.nom, icone:r.icone, couleur:r.couleur, groupe:r.groupe,
+              active:!!r.defaut, montant:0, perso:false,
+              periodicite:"mensuel", montantReel:0};
+    }),
+    depenses: [],
+    previsions: [],        /* Sprint 5B — dépenses prévues, non comptabilisées tant que non validées (F4bis) */
+    cycleId: uid(),
+    cycleDebut: aujourdhui(),
+    cycles: [],
+    rappelSauvegarde: false,
+    derniereSauvegarde: null,
+    pin: null,              /* Sprint 4 — code à 4 chiffres, ou null */
+    epargneFelicitee: null  /* Sprint 4 — total épargné du cycle qu'on vient de clôturer */
+  };
+}
+
+/* Remise en forme et migration silencieuse.
+   Sert au chargement local ET à la restauration d'un fichier.
+   Renvoie null si le contenu n'a rien d'un état MonDjai. */
+function normaliser(o){
+  if(!o || typeof o !== "object") return null;
+  if(!Array.isArray(o.rubriques) || !Array.isArray(o.revenus)) return null;
+
+  var rubs = o.rubriques.filter(function(r){
+    return r && typeof r.id === "string" && typeof r.nom === "string";
+  }).map(function(r){
+    return {
+      id: r.id, nom: r.nom,
+      icone: r.icone || "\uD83D\uDCB8",
+      couleur: r.couleur || COULEURS[0],
+      groupe: r.groupe || "Vie courante",
+      active: !!r.active,
+      montant: Number(r.montant) || 0,
+      perso: !!r.perso,
+      /* Sprint 4 — lissage mémorisé sur la rubrique (F9) */
+      periodicite: estPeriodicite(r.periodicite) ? r.periodicite : "mensuel",
+      montantReel: Number(r.montantReel) || 0
+    };
+  });
+  if(!rubs.length) return null;
+  o.rubriques = rubs;
+
+  o.revenus = o.revenus.filter(function(r){ return r && typeof r === "object"; })
+    .map(function(r){
+      return {id: r.id || uid(), libelle: String(r.libelle || ""), montant: Number(r.montant) || 0,
+              /* Sprint 5B — date propre à ce revenu (jamais celle du salaire par défaut) */
+              date: (typeof r.date === "string" && r.date) ? r.date : null};
+    });
+  if(!o.revenus.length) o.revenus = [{id: uid(), libelle: "Salaire net", montant: 0, date: null}];
+
+  o.depenses = (Array.isArray(o.depenses) ? o.depenses : []).filter(function(d){
+    return d && typeof d.rubrique === "string" && Number(d.montant) > 0;
+  }).map(function(d){
+    return {id: d.id || uid(), rubrique: d.rubrique, montant: Number(d.montant) || 0,
+            libelle: String(d.libelle || ""), date: d.date || aujourdhui(), cree: Number(d.cree) || 0};
+  });
+
+  /* Sprint 5B — dépenses prévues (F4bis) : une date future, jamais comptée
+     dans le solde tant qu'elle n'a pas été validée. */
+  o.previsions = (Array.isArray(o.previsions) ? o.previsions : []).filter(function(d){
+    return d && typeof d.rubrique === "string" && Number(d.montant) > 0;
+  }).map(function(d){
+    return {id: d.id || uid(), rubrique: d.rubrique, montant: Number(d.montant) || 0,
+            libelle: String(d.libelle || ""), date: d.date || aujourdhui(), cree: Number(d.cree) || 0};
+  });
+
+  if(o.jourSalaire !== "dernier"){
+    var j = Number(o.jourSalaire);
+    o.jourSalaire = (j >= 1 && j <= 31) ? j : null;
+  }
+  o.onboarded = !!o.onboarded;
+
+  /* --- Sprint 3 : les données existantes deviennent le premier cycle --- */
+  if(!o.cycleId) o.cycleId = uid();
+  if(!o.cycleDebut) o.cycleDebut = debutCycleTheorique(o.jourSalaire);
+  o.cycles = (Array.isArray(o.cycles) ? o.cycles : []).filter(function(c){
+    return c && typeof c === "object" && Array.isArray(c.rubriques);
+  }).map(function(c){
+    return {
+      id: c.id || uid(),
+      debut: c.debut || aujourdhui(),
+      fin: c.fin || c.debut || aujourdhui(),
+      jourSalaire: (c.jourSalaire === undefined ? o.jourSalaire : c.jourSalaire),
+      revenus: (Array.isArray(c.revenus) ? c.revenus : []).map(function(r){
+        return {id: r.id || uid(), libelle: String(r.libelle || ""), montant: Number(r.montant) || 0,
+                date: (typeof r.date === "string" && r.date) ? r.date : null};
+      }),
+      rubriques: c.rubriques.filter(function(r){ return r && typeof r.id === "string"; })
+        .map(function(r){
+          return {id: r.id, nom: String(r.nom || "Rubrique"), icone: r.icone || "\uD83D\uDCB8",
+                  couleur: r.couleur || COULEURS[0], groupe: r.groupe || "Vie courante",
+                  montant: Number(r.montant) || 0};
+        }),
+      depenses: (Array.isArray(c.depenses) ? c.depenses : []).filter(function(d){
+        return d && typeof d.rubrique === "string";
+      }).map(function(d){
+        return {id: d.id || uid(), rubrique: d.rubrique, montant: Number(d.montant) || 0,
+                libelle: String(d.libelle || ""), date: d.date || c.debut || aujourdhui(),
+                cree: Number(d.cree) || 0};
+      })
+    };
+  });
+  o.rappelSauvegarde = !!o.rappelSauvegarde;
+  if(typeof o.derniereSauvegarde !== "string") o.derniereSauvegarde = null;
+
+  /* --- Sprint 4 : code d'accès et félicitations d'épargne --- */
+  o.pin = (typeof o.pin === "string" && /^[0-9]{4}$/.test(o.pin)) ? o.pin : null;
+  o.epargneFelicitee = (o.epargneFelicitee === null || o.epargneFelicitee === undefined)
+    ? null : (Number(o.epargneFelicitee) || 0);
+
+  o.version = 6;
+  return o;
+}
+
+function charger(){
+  try{
+    var brut = localStorage.getItem(CLE);
+    if(brut){
+      var o = normaliser(JSON.parse(brut));
+      if(o) return o;
+    }
+  }catch(e){}
+  return neuf();
+}
+function sauver(){
+  try{ localStorage.setItem(CLE, JSON.stringify(S)); }catch(e){}
+}
+
+/* ---------- calculs ---------- */
+function totalRevenus(){
+  return S.revenus.reduce(function(t,r){ return t + (Number(r.montant)||0); }, 0);
+}
+function actives(){
+  return S.rubriques.filter(function(r){ return r.active; });
+}
+function totalReparti(){
+  return actives().reduce(function(t,r){ return t + (Number(r.montant)||0); }, 0);
+}
+function reste(){ return totalRevenus() - totalReparti(); }
+function libelleJour(){
+  if(S.jourSalaire === "dernier") return "le dernier jour du mois";
+  if(S.jourSalaire === 1) return "le 1er de chaque mois";
+  if(S.jourSalaire) return "le " + S.jourSalaire + " de chaque mois";
+  return "—";
+}
+function rubriqueParId(id){
+  for(var i = 0; i < S.rubriques.length; i++){ if(S.rubriques[i].id === id) return S.rubriques[i]; }
+  return null;
+}
+function depensesDe(id){
+  return S.depenses.filter(function(d){ return d.rubrique === id; });
+}
+function depenseRub(id){
+  return depensesDe(id).reduce(function(t,d){ return t + (Number(d.montant)||0); }, 0);
+}
+function totalDepense(){
+  return S.depenses.reduce(function(t,d){ return t + (Number(d.montant)||0); }, 0);
+}
+function disponible(){ return totalRevenus() - totalDepense(); }
+/* Tri : les plus récentes d'abord */
+function triDepenses(liste){
+  return liste.slice().sort(function(a,b){
+    if(a.date === b.date) return (b.cree||0) - (a.cree||0);
+    return a.date < b.date ? 1 : -1;
+  });
+}
+/* F5 : vert < 70 % · orange 70–99 % · rouge en dépassement */
+function etatJauge(depense, affecte){
+  if(affecte <= 0) return depense > 0 ? "rouge" : "neutre";
+  var p = depense / affecte * 100;
+  if(p > 100) return "rouge";
+  if(p >= 70) return "orange";
+  return "vert";
+}
+function couleurEtat(e){
+  return e === "rouge" ? "var(--red)" : e === "orange" ? "var(--orange)"
+       : e === "vert" ? "var(--green)" : e === "attente" ? "var(--bleu)" : "var(--muted)";
+}
+function classeEtat(e){
+  return e === "rouge" ? "c-rouge" : e === "orange" ? "c-orange" : e === "vert" ? "c-vert"
+       : e === "attente" ? "c-attente" : "c-neutre";
+}
+
+/* ==============================================================
+   SPRINT 4 — ÉPARGNE VALORISÉE (F10)
+   Dans le groupe Épargne & Investissement, on ne « dépense » pas :
+   on met de côté. Rien n'y passe jamais au rouge.
+   ============================================================== */
+function estEpargne(r){
+  return !!r && (r.groupe || "") === GROUPE_EPARGNE;
+}
+/* État d'une rubrique ou d'un groupe :
+   épargne → vert dès l'objectif atteint, bleu d'attente avant, jamais de rouge
+   ailleurs → vert < 70 % · orange 70–99 % · rouge en dépassement (F5, inchangé) */
+function etatDe(depense, affecte, epargne){
+  if(epargne){
+    if(depense <= 0) return affecte > 0 ? "attente" : "neutre";
+    return (depense >= affecte) ? "vert" : "attente";
+  }
+  return etatJauge(depense, affecte);
+}
+/* petite jauge : dépensé (ou mis de côté) / affecté */
+function jaugeRub(depense, affecte, epargne){
+  var wrap = el("div", "jauge-r");
+  var b = document.createElement("i");
+  var base = Math.max(affecte, depense, 1);
+  var p = Math.min(100, depense / base * 100);
+  b.style.width = (depense > 0 ? Math.max(p, 3) : 0) + "%";
+  b.style.background = couleurEtat(etatDe(depense, affecte, epargne));
+  wrap.appendChild(b);
+  return wrap;
+}
+/* Phrase de droite sous une jauge d'épargne : jamais un reproche */
+function motEpargne(mis, objectif){
+  if(objectif <= 0) return mis > 0 ? "Tout est du gagné" : "Aucun objectif fixé";
+  if(mis > objectif) return "Objectif dépassé de " + fmtF(mis - objectif) + " 🎉";
+  if(mis === objectif && mis > 0) return "Objectif atteint 🎉";
+  return "Encore " + fmtF(objectif - mis) + " à mettre de côté";
+}
+/* Total mis de côté sur le cycle en cours */
+function totalEpargne(){
+  return S.depenses.reduce(function(t, d){
+    var r = rubriqueParId(d.rubrique);
+    return t + (estEpargne(r) ? (Number(d.montant) || 0) : 0);
+  }, 0);
+}
+/* Total mis de côté sur un cycle archivé */
+function cycEpargne(c){
+  var ids = {};
+  c.rubriques.forEach(function(r){ if(estEpargne(r)) ids[r.id] = true; });
+  return c.depenses.reduce(function(t, d){
+    return t + (ids[d.rubrique] ? (Number(d.montant) || 0) : 0);
+  }, 0);
+}
+
+/* ==============================================================
+   SPRINT 4 — ASSISTANT DE LISSAGE (F9)
+   Montant réel + périodicité → provision mensuelle.
+   Ex. : 20 000 F par trimestre → 6 667 F par mois.
+   ============================================================== */
+function estPeriodicite(cle){
+  for(var i = 0; i < PERIODICITES.length; i++){ if(PERIODICITES[i].cle === cle) return true; }
+  return false;
+}
+function periodDe(cle){
+  for(var i = 0; i < PERIODICITES.length; i++){ if(PERIODICITES[i].cle === cle) return PERIODICITES[i]; }
+  return PERIODICITES[0];
+}
+function provisionRub(r){
+  var reel = Number(r.montantReel) || 0;
+  if(reel <= 0) return 0;
+  return Math.round(reel / periodDe(r.periodicite).mois);
+}
+/* Rappel affiché sous le nom de la rubrique, quand un lissage est mémorisé */
+function rappelLissage(r){
+  var reel = Number(r.montantReel) || 0;
+  if(reel <= 0) return "";
+  var p = periodDe(r.periodicite);
+  if(p.cle === "mensuel") return fmtF(reel) + " par mois";
+  return fmtF(reel) + " " + p.par + " ≈ " + fmtF(provisionRub(r)) + "/mois";
+}
+
+/* ==============================================================
+   SPRINT 3 — CYCLES BUDGÉTAIRES (F1)
+   ============================================================== */
+
+/* Le cycle en cours est-il arrivé à échéance ? */
+function cycleAEcheance(){
+  if(!S.onboarded || S.jourSalaire === null || S.jourSalaire === undefined) return false;
+  var t = new Date(); t.setHours(0,0,0,0);
+  return t.getTime() >= paieApres(S.cycleDebut || aujourdhui()).getTime();
+}
+function periodeCycle(c){
+  return dateComplete(c.debut) + " → " + dateComplete(c.fin);
+}
+function cycleParId(id){
+  for(var i = 0; i < S.cycles.length; i++){ if(S.cycles[i].id === id) return S.cycles[i]; }
+  return null;
+}
+/* Photographie du cycle en cours, telle qu'elle sera archivée */
+function instantaneCycle(){
+  return {
+    id: S.cycleId || uid(),
+    debut: S.cycleDebut || aujourdhui(),
+    fin: aujourdhui(),
+    jourSalaire: S.jourSalaire,
+    revenus: S.revenus.map(function(r){
+      return {id: r.id, libelle: r.libelle, montant: Number(r.montant) || 0, date: r.date || null};
+    }),
+    /* on garde les rubriques qui ont reçu un montant, porté une dépense, ou qui sont actives */
+    rubriques: S.rubriques.filter(function(r){
+      return r.active || (Number(r.montant) || 0) > 0 || depenseRub(r.id) > 0;
+    }).map(function(r){
+      return {id: r.id, nom: r.nom, icone: r.icone, couleur: r.couleur,
+              groupe: r.groupe, montant: Number(r.montant) || 0};
+    }),
+    depenses: S.depenses.map(function(d){
+      return {id: d.id, rubrique: d.rubrique, montant: Number(d.montant) || 0,
+              libelle: d.libelle || "", date: d.date, cree: d.cree || 0};
+    })
+  };
+}
+/* --- calculs sur un cycle archivé --- */
+function cycRevenus(c){
+  return c.revenus.reduce(function(t,r){ return t + (Number(r.montant)||0); }, 0);
+}
+function cycReparti(c){
+  return c.rubriques.reduce(function(t,r){ return t + (Number(r.montant)||0); }, 0);
+}
+function cycDepenseRub(c, id){
+  return c.depenses.reduce(function(t,d){
+    return t + (d.rubrique === id ? (Number(d.montant)||0) : 0);
+  }, 0);
+}
+function cycDepense(c){
+  return c.depenses.reduce(function(t,d){ return t + (Number(d.montant)||0); }, 0);
+}
+
+/* Préparer un nouveau cycle : revenus et répartition préremplis, modifiables */
+function ouvrirNouveauCycle(){
+  brouillonCycle = {
+    revenus: S.revenus.map(function(r){
+      return {id: uid(), libelle: r.libelle, montant: Number(r.montant) || 0, date: null};
+    }),
+    montants: {},
+    /* Sprint 5B — base de référence pour la répartition automatique
+       proportionnelle si les revenus changent (F2bis) */
+    montantsOrigine: {},
+    totalOrigine: totalRevenus(),
+    derniereDecisionTotal: null
+  };
+  actives().forEach(function(r){
+    brouillonCycle.montants[r.id] = Number(r.montant) || 0;
+    brouillonCycle.montantsOrigine[r.id] = Number(r.montant) || 0;
+  });
+  aller("nouveauCycle");
+}
+/* Sprint 5B — recalcule les montants du brouillon proportionnellement au
+   nouveau total de revenus, à partir des montants du cycle précédent :
+   les charges fixes restent identiques, l'épargne suit le revenu au même
+   pourcentage, le reste (vie courante, social & loisirs…) absorbe l'écart. */
+function recalculerRepartitionAuto(){
+  if(!brouillonCycle) return;
+  var b = brouillonCycle;
+  var oldTotal = b.totalOrigine, newTotal = brTotalRevenus();
+  if(oldTotal <= 0 || newTotal <= 0) return;
+  var act = actives();
+  var fixTotal = 0, epTotal = 0, varTotal = 0;
+  act.forEach(function(r){
+    var m = Number(b.montantsOrigine[r.id]) || 0;
+    if(r.groupe === "Fixes") fixTotal += m;
+    else if(estEpargne(r)) varTotal += 0, epTotal += m;
+    else varTotal += m;
+  });
+  var epNeuf = epTotal * (newTotal / oldTotal);
+  var budgetVar = Math.max(0, newTotal - fixTotal - epNeuf);
+  act.forEach(function(r){
+    var mOld = Number(b.montantsOrigine[r.id]) || 0;
+    if(r.groupe === "Fixes"){
+      b.montants[r.id] = mOld;
+    }else if(estEpargne(r)){
+      b.montants[r.id] = Math.round(mOld * (newTotal / oldTotal));
+    }else{
+      b.montants[r.id] = varTotal > 0 ? Math.round(mOld / varTotal * budgetVar) : 0;
+    }
+  });
+}
+function brTotalRevenus(){
+  if(!brouillonCycle) return 0;
+  return brouillonCycle.revenus.reduce(function(t,r){ return t + (Number(r.montant)||0); }, 0);
+}
+function brTotalReparti(){
+  if(!brouillonCycle) return 0;
+  return actives().reduce(function(t,r){ return t + (Number(brouillonCycle.montants[r.id])||0); }, 0);
+}
+/* Clôture de l'ancien cycle, ouverture du nouveau */
+function validerNouveauCycle(){
+  if(!brouillonCycle) return;
+  var b = brouillonCycle;
+  S.cycles.unshift(instantaneCycle());       /* le plus récent en tête */
+  S.cycleId = uid();
+  S.cycleDebut = aujourdhui();
+  S.revenus = b.revenus.map(function(r){
+    return {id: uid(), libelle: r.libelle || "Revenu", montant: Number(r.montant) || 0, date: r.date || null};
+  });
+  if(!S.revenus.length) S.revenus = [{id: uid(), libelle: "Salaire net", montant: 0, date: null}];
+  S.rubriques.forEach(function(r){
+    r.montant = r.active ? (Number(b.montants[r.id]) || 0) : 0;
+  });
+  S.epargneFelicitee = totalEpargne();       /* Sprint 4 — de quoi féliciter (F10) */
+  S.depenses = [];
+  S.rappelSauvegarde = true;                 /* rappel doux à chaque clôture (F7) */
+  brouillonCycle = null;
+  sauver();
+  aller("dashboard");
+  toast("Nouveau cycle démarré ✓");
+}
+
+/* ==============================================================
+   SPRINT 3 — AFFICHAGE PAR GROUPES (F5)
+   ============================================================== */
+/* Groupes réellement représentés, dans l'ordre du cahier des charges.
+   Les groupes vides ne sont jamais renvoyés. */
+function groupesPresents(liste){
+  var vus = [], out = [];
+  liste.forEach(function(r){
+    var g = r.groupe || "Autres";
+    if(vus.indexOf(g) < 0) vus.push(g);
+  });
+  GROUPES.forEach(function(g){ if(vus.indexOf(g) >= 0) out.push(g); });
+  vus.forEach(function(g){ if(out.indexOf(g) < 0) out.push(g); });
+  return out;
+}
+function membresGroupe(liste, g){
+  return liste.filter(function(r){ return (r.groupe || "Autres") === g; });
+}
+/* En-tête de groupe : nom + sous-total dépensé (ou mis de côté) / affecté.
+   Sprint 4 — le groupe Épargne & Investissement suit la règle positive (F10). */
+function enteteGroupe(nom, affecte, depense, epargne){
+  var h = el("div", "grp");
+  var t = el("div", "grp-t");
+  t.appendChild(el("span", "grp-nom", nom));
+  t.appendChild(el("span", "grp-mont", fmtF(depense) + " / " + fmtF(affecte)));
+  h.appendChild(t);
+  h.appendChild(jaugeRub(depense, affecte, epargne));
+  if(epargne){
+    var l = el("div", "tiny " + classeEtat(etatDe(depense, affecte, true)), motEpargne(depense, affecte));
+    l.style.marginTop = "5px";
+    h.appendChild(l);
+  }
+  return h;
+}
+
+/* ==============================================================
+   SPRINT 3 — SAUVEGARDE ET RESTAURATION (F7)
+   Tout se passe sur l'appareil : aucun envoi, aucun réseau.
+   ============================================================== */
+function sauvegarderDonnees(){
+  var ok = false;
+  try{
+    var texte = JSON.stringify(S, null, 2);
+    var blob = new Blob([texte], {type: "application/json"});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "mondjai-sauvegarde-" + aujourdhui() + ".json";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function(){
+      if(a.parentNode) a.parentNode.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 1500);
+    ok = true;
+  }catch(e){ ok = false; }
+  if(ok){
+    S.derniereSauvegarde = aujourdhui();
+    S.rappelSauvegarde = false;
+    sauver();
+    toast("Sauvegarde téléchargée ✓");
+    render();
+  }else{
+    alert("La sauvegarde n'a pas pu être créée sur cet appareil. Réessayez depuis le navigateur Chrome.");
+  }
+}
+function restaurerDonnees(){
+  var input = document.createElement("input");
+  input.type = "file";
+  input.accept = "application/json,.json";
+  input.style.display = "none";
+  document.body.appendChild(input);
+  input.addEventListener("change", function(){
+    var f = input.files && input.files[0];
+    if(!f){ if(input.parentNode) input.parentNode.removeChild(input); return; }
+    var lecteur = new FileReader();
+    lecteur.onload = function(){
+      var objet = null;
+      try{ objet = normaliser(JSON.parse(String(lecteur.result))); }catch(e){ objet = null; }
+      if(!objet){
+        alert("Ce fichier n'est pas une sauvegarde MonDjai valide.\n\nChoisissez un fichier « mondjai-sauvegarde-….json » créé par l'application. Vos données actuelles n'ont pas été touchées.");
+      }else{
+        var res = objet.cycles.length;
+        var msg = "Restaurer cette sauvegarde ?\n\n"
+                + "Elle contient " + objet.rubriques.length + " rubriques, "
+                + objet.depenses.length + " dépenses dans le cycle en cours et "
+                + res + (res > 1 ? " cycles archivés" : " cycle archivé") + ".\n\n"
+                + "Toutes les données actuellement sur cet appareil seront remplacées.";
+        if(confirm(msg)){
+          S = objet;
+          sauver();
+          rubOuverte = null; cycleOuvert = null; brouillonCycle = null;
+          vue = S.onboarded ? "dashboard" : "revenus";
+          render();
+          toast("Sauvegarde restaurée ✓");
+        }
+      }
+      if(input.parentNode) input.parentNode.removeChild(input);
+    };
+    lecteur.onerror = function(){
+      alert("Le fichier n'a pas pu être lu. Vos données actuelles n'ont pas été touchées.");
+      if(input.parentNode) input.parentNode.removeChild(input);
+    };
+    lecteur.readAsText(f);
+  });
+  input.click();
+}
+/* Deux boutons réutilisés sur le tableau de bord et l'historique */
+function blocSauvegarde(){
+  var r = el("div", "row-btns");
+  var b1 = el("button", "btn", "Sauvegarder mes données"); b1.type = "button";
+  b1.addEventListener("click", sauvegarderDonnees);
+  var b2 = el("button", "btn", "Restaurer une sauvegarde"); b2.type = "button";
+  b2.addEventListener("click", restaurerDonnees);
+  r.appendChild(b1); r.appendChild(b2);
+  return r;
+}
+
+/* ---------- champ montant ---------- */
+function champMontant(valeur, onChange){
+  var i = document.createElement("input");
+  i.type = "text";
+  i.inputMode = "numeric";
+  i.className = "money" + (valeur ? "" : " vide");
+  i.value = valeur ? fmt(valeur) : "0";
+  i.setAttribute("aria-label", "Montant en francs CFA");
+  i.addEventListener("focus", function(){
+    if(chiffres(i.value) === 0) i.value = "";
+    setTimeout(function(){ try{ i.scrollIntoView({block:"center", behavior:"smooth"}); }catch(e){} }, 250);
+  });
+  i.addEventListener("input", function(){
+    var v = chiffres(i.value);
+    i.value = v ? fmt(v) : "";
+    i.classList.toggle("vide", v === 0);
+    onChange(v);
+  });
+  i.addEventListener("blur", function(){
+    var v = chiffres(i.value);
+    i.value = fmt(v);
+    i.classList.toggle("vide", v === 0);
+  });
+  return i;
+}
+
+/* ---------- petit message de confirmation ---------- */
+function toast(txt){
+  var t = el("div", "toast", txt);
+  document.body.appendChild(t);
+  setTimeout(function(){ t.style.opacity = "0"; }, 1300);
+  setTimeout(function(){ if(t.parentNode) t.parentNode.removeChild(t); }, 1700);
+}
+
+/* ---------- rendu général ---------- */
+function render(){
+  var ec = document.getElementById("ecran");
+  var ba = document.getElementById("barre");
+  var og = document.getElementById("onglets");
+  ec.innerHTML = ""; ba.innerHTML = ""; og.innerHTML = "";
+  window.scrollTo(0,0);
+  var eb = document.getElementById("eyebrow");
+
+  /* Sprint 4 — verrou : aucun montant n'est dessiné tant que le code n'est pas saisi */
+  if(S.pin && !deverrouille){
+    eb.textContent = "Verrouillé";
+    document.body.classList.remove("avec-onglets");
+    vueVerrou(ec, ba);
+    return;
+  }
+
+  if(!S.onboarded){
+    eb.textContent = "Étape " + ({revenus:1, rubriques:2, repartition:3}[vue] || 3) + " sur 3";
+  }else{
+    eb.textContent = ({revenus:"Revenus", rubriques:"Rubriques", repartition:"Répartition",
+                       dashboard:"Accueil", enveloppes:"Enveloppes", journal:"Journal",
+                       epargne:"Épargne", rubrique:"Enveloppe",
+                       nouveauCycle:"Nouveau cycle", historique:"Historique",
+                       cycle:"Cycle archivé", reglages:"Réglages", apropos:"À propos"})[vue] || "Accueil";
+  }
+  if(vue === "revenus") vueRevenus(ec, ba);
+  else if(vue === "rubriques") vueRubriques(ec, ba);
+  else if(vue === "repartition") vueRepartition(ec, ba);
+  else if(vue === "enveloppes") vueEnveloppes(ec, ba);
+  else if(vue === "journal") vueJournal(ec, ba);
+  else if(vue === "epargne") vueEpargne(ec, ba);
+  else if(vue === "rubrique") vueRubriqueDetail(ec, ba);
+  else if(vue === "nouveauCycle") vueNouveauCycle(ec, ba);
+  else if(vue === "historique") vueHistorique(ec, ba);
+  else if(vue === "cycle") vueCycleArchive(ec, ba);
+  else if(vue === "reglages") vueReglages(ec, ba);
+  else if(vue === "apropos") vueApropos(ec, ba);
+  else vueDashboard(ec, ba);
+
+  /* Sprint 5A — menu de navigation : uniquement sur les 5 écrans principaux,
+     jamais pendant l'accueil initial ni sur un écran secondaire (qui a son
+     propre bouton « ‹ retour »). */
+  var montrer = S.onboarded && estOnglet(vue);
+  document.body.classList.toggle("avec-onglets", montrer);
+  if(montrer) dessinerOnglets(og);
+}
+/* Construit le menu du bas, avec l'onglet actif mis en évidence */
+function dessinerOnglets(og){
+  var in_ = el("div", "nav-tabs-in");
+  ONGLETS.forEach(function(t){
+    var b = el("button", "nav-tab");
+    b.type = "button";
+    b.setAttribute("aria-current", vue === t.v ? "true" : "false");
+    b.setAttribute("aria-label", t.lab);
+    var ic = el("span", "nav-ic", t.ic);
+    ic.setAttribute("aria-hidden", "true");
+    b.appendChild(ic);
+    b.appendChild(el("span", "nav-lab", t.lab));
+    b.addEventListener("click", function(){ if(vue !== t.v) aller(t.v); });
+    in_.appendChild(b);
+  });
+  og.appendChild(in_);
+}
+function aller(v){
+  if(v !== vue){ try{ history.pushState({mdVue: v}, ""); }catch(e){} }
+  vue = v; sauver(); render();
+}
+/* Ouvrir un écran en se souvenant d'où l'on vient (bouton retour juste) */
+function ouvrirVue(v, depuis){ retours[v] = depuis || "dashboard"; aller(v); }
+function retourDe(v){ return retours[v] || "dashboard"; }
+/* Bouton « ‹ ... » réutilisé en haut des écrans secondaires */
+function boutonRetour(texte, cible){
+  var b = el("button", "btn btn-ghost btn-line", "‹ " + texte);
+  b.type = "button";
+  b.style.marginBottom = "14px";
+  b.addEventListener("click", function(){ aller(cible); });
+  return b;
+}
+function ouvrirRubrique(id, depuis){ retours["rubrique"] = depuis || "enveloppes"; rubOuverte = id; aller("rubrique"); }
+function ouvrirCycle(id){ cycleOuvert = id; aller("cycle"); }
+
+/* ==============================================================
+   ÉCRAN 1 — Jour de salaire + revenus
+   ============================================================== */
+function vueRevenus(ec, ba){
+  ec.appendChild(el("h1", null, S.onboarded ? "Vos revenus" : "Bienvenue sur MonDjai"));
+  ec.appendChild(el("p", "sub", S.onboarded
+    ? "Modifiez le jour de paie ou vos revenus du mois."
+    : "Deux choses pour commencer : quand vous êtes payé, et combien vous recevez."));
+
+  /* --- jour de salaire --- */
+  ec.appendChild(el("h2", null, "Jour de réception du salaire"));
+  var grille = el("div", "jours");
+  for(var j = 1; j <= 31; j++){
+    (function(jour){
+      var b = el("button", "jour", String(jour));
+      b.type = "button";
+      b.setAttribute("aria-pressed", S.jourSalaire === jour ? "true" : "false");
+      b.addEventListener("click", function(){
+        S.jourSalaire = jour; sauver();
+        grille.querySelectorAll(".jour").forEach(function(x){ x.setAttribute("aria-pressed","false"); });
+        bDernier.setAttribute("aria-pressed","false");
+        b.setAttribute("aria-pressed","true");
+        majSuite();
+      });
+      grille.appendChild(b);
+    })(j);
+  }
+  ec.appendChild(grille);
+
+  var bDernier = el("button", "btn jour-dernier", "Dernier jour du mois");
+  bDernier.type = "button";
+  bDernier.setAttribute("aria-pressed", S.jourSalaire === "dernier" ? "true" : "false");
+  bDernier.addEventListener("click", function(){
+    S.jourSalaire = "dernier"; sauver();
+    grille.querySelectorAll(".jour").forEach(function(x){ x.setAttribute("aria-pressed","false"); });
+    bDernier.setAttribute("aria-pressed","true");
+    majSuite();
+  });
+  ec.appendChild(bDernier);
+
+  /* --- revenus --- */
+  ec.appendChild(el("h2", null, "Revenus du mois"));
+  var liste = el("div");
+  ec.appendChild(liste);
+
+  function dessinerLignes(){
+    liste.innerHTML = "";
+    S.revenus.forEach(function(rev, idx){
+      var l = el("div", "ligne");
+      var lib = document.createElement("input");
+      lib.type = "text"; lib.className = "lib"; lib.value = rev.libelle;
+      lib.placeholder = "Nom du revenu";
+      lib.setAttribute("aria-label", "Nom du revenu");
+      lib.addEventListener("input", function(){ rev.libelle = lib.value; sauver(); });
+      l.appendChild(lib);
+      l.appendChild(champMontant(rev.montant, function(v){ rev.montant = v; sauver(); majTotal(); }));
+      if(idx > 0){
+        var d = el("button", "del", "×");
+        d.type = "button"; d.title = "Retirer ce revenu";
+        d.setAttribute("aria-label", "Retirer " + (rev.libelle || "ce revenu"));
+        d.addEventListener("click", function(){
+          S.revenus = S.revenus.filter(function(x){ return x.id !== rev.id; });
+          sauver(); dessinerLignes(); majTotal();
+        });
+        l.appendChild(d);
+      }
+      liste.appendChild(l);
+      /* Sprint 5B — date propre à ce revenu, jamais celle du salaire */
+      if(idx > 0){
+        var fd = el("div", "champ-date");
+        fd.appendChild(el("span", "tiny muted", "Reçu le"));
+        var id_ = document.createElement("input");
+        id_.type = "date"; id_.className = "input-date";
+        id_.value = rev.date || "";
+        id_.setAttribute("aria-label", "Date de réception de " + (rev.libelle || "ce revenu"));
+        id_.addEventListener("change", function(){ rev.date = id_.value || null; sauver(); });
+        fd.appendChild(id_);
+        liste.appendChild(fd);
+      }
+    });
+  }
+  dessinerLignes();
+
+  var bAjout = el("button", "btn btn-ghost", "+ Ajouter un revenu");
+  bAjout.type = "button";
+  var menu = el("div", "menu");
+  menu.hidden = true;
+  TYPES_REVENU.forEach(function(t){
+    var b = el("button", null, t);
+    b.type = "button";
+    b.addEventListener("click", function(){
+      S.revenus.push({id: uid(), libelle: (t === "Autre" ? "" : t), montant: 0, date: aujourdhui()});
+      sauver(); menu.hidden = true; dessinerLignes(); majTotal();
+      var champs = liste.querySelectorAll(".lib");
+      if(t === "Autre" && champs.length) champs[champs.length-1].focus();
+    });
+    menu.appendChild(b);
+  });
+  bAjout.addEventListener("click", function(){ menu.hidden = !menu.hidden; });
+  ec.appendChild(bAjout);
+  ec.appendChild(menu);
+
+  var tot = el("div", "total-ligne");
+  tot.appendChild(el("span", "muted small", "Total des revenus"));
+  var totVal = el("span", "big");
+  tot.appendChild(totVal);
+  ec.appendChild(tot);
+
+  /* --- reprendre une sauvegarde, au tout premier lancement --- */
+  if(!S.onboarded){
+    ec.appendChild(el("h2", null, "Vous avez déjà utilisé MonDjai ?"));
+    var bRes = el("button", "btn", "Restaurer une sauvegarde");
+    bRes.type = "button";
+    bRes.addEventListener("click", restaurerDonnees);
+    ec.appendChild(bRes);
+    var aideRes = el("p", "tiny muted", "Reprenez votre fichier « mondjai-sauvegarde-….json » : tout revient comme avant.");
+    aideRes.style.margin = "8px 0 0";
+    ec.appendChild(aideRes);
+  }
+
+  /* --- barre --- */
+  var bar = el("div", "sticky"), inn = el("div", "sticky-in");
+  var suite = el("button", "btn btn-primary", S.onboarded ? "Enregistrer" : "Continuer");
+  suite.type = "button";
+  suite.addEventListener("click", function(){
+    sauver();
+    aller(S.onboarded ? retourDe("revenus") : "rubriques");
+  });
+  var aide = el("p", "tiny muted", "");
+  aide.style.margin = "0 0 8px";
+  inn.appendChild(aide); inn.appendChild(suite);
+  bar.appendChild(inn); ba.appendChild(bar);
+
+  function majTotal(){ totVal.textContent = fmtF(totalRevenus()); majSuite(); }
+  function majSuite(){
+    var okJour = S.jourSalaire !== null;
+    var okRev = totalRevenus() > 0;
+    suite.disabled = !(okJour && okRev);
+    aide.textContent = !okJour ? "Choisissez d'abord votre jour de paie."
+                     : !okRev ? "Saisissez au moins un montant."
+                     : "Vous recevez " + fmtF(totalRevenus()) + ", " + libelleJour() + ".";
+  }
+  majTotal();
+}
+
+/* ==============================================================
+   ÉCRAN 2 — Rubriques
+   ============================================================== */
+function vueRubriques(ec, ba){
+  if(S.onboarded) ec.appendChild(boutonRetour(
+    retourDe("rubriques") === "reglages" ? "Réglages" : retourDe("rubriques") === "epargne" ? "Épargne" : "Accueil",
+    retourDe("rubriques")));
+  ec.appendChild(el("h1", null, "Vos rubriques"));
+  ec.appendChild(el("p", "sub", S.onboarded
+    ? "Cochez ce que vous utilisez. Le crayon ✎ permet de renommer une rubrique, de changer son icône, sa couleur et son groupe."
+    : "Cochez les enveloppes que vous utilisez. Vous pourrez en ajouter ou en retirer plus tard."));
+
+  var liste = el("div");
+  ec.appendChild(liste);
+
+  /* Sprint 4 — la liste est rangée par groupe, et chaque rubrique est modifiable */
+  function dessiner(){
+    liste.innerHTML = "";
+    groupesPresents(S.rubriques).forEach(function(g){
+      var membres = membresGroupe(S.rubriques, g);
+      if(!membres.length) return;
+      var h = el("div", "grp");
+      var ht = el("div", "grp-t");
+      ht.appendChild(el("span", "grp-nom", g));
+      var nA = membres.filter(function(x){ return x.active; }).length;
+      ht.appendChild(el("span", "grp-mont", nA + (nA > 1 ? " cochées" : " cochée")));
+      h.appendChild(ht);
+      liste.appendChild(h);
+      membres.forEach(function(r){ liste.appendChild(ligneRub(r)); });
+    });
+  }
+  function ligneRub(r){
+    var wrap = el("div", "rub-row");
+    var b = el("button", "rub");
+    b.type = "button";
+    b.setAttribute("aria-pressed", r.active ? "true" : "false");
+    var ic = el("span", "ico", r.icone);
+    ic.style.background = "rgba(255,255,255,.05)";
+    ic.style.boxShadow = "inset 0 0 0 1px " + r.couleur + "55";
+    b.appendChild(ic);
+    b.appendChild(el("span", "nom", r.nom));
+    if(r.perso) b.appendChild(el("span", "perso-tag", "perso"));
+    b.appendChild(el("span", "check", "✓"));
+    b.addEventListener("click", function(){
+      r.active = !r.active;
+      if(!r.active) r.montant = 0;
+      sauver();
+      b.setAttribute("aria-pressed", r.active ? "true" : "false");
+      dessiner();
+      majCompte();
+    });
+    wrap.appendChild(b);
+    if(S.onboarded){
+      var e = el("button", "mini", "✎");
+      e.type = "button";
+      e.setAttribute("aria-label", "Modifier " + r.nom);
+      e.addEventListener("click", function(){
+        ouvrirEditionRubrique(r, function(){ dessiner(); majCompte(); });
+      });
+      wrap.appendChild(e);
+    }
+    return wrap;
+  }
+  dessiner();
+
+  /* --- création --- */
+  ec.appendChild(el("h2", null, "Créer une rubrique"));
+  var bOuvrir = el("button", "btn btn-ghost", "+ Nouvelle rubrique personnalisée");
+  bOuvrir.type = "button";
+  ec.appendChild(bOuvrir);
+
+  var form = el("div", "card");
+  form.hidden = true;
+  form.style.marginTop = "10px";
+
+  var fNom = el("div", "field");
+  fNom.appendChild(el("label", null, "Nom"));
+  var iNom = document.createElement("input");
+  iNom.type = "text"; iNom.className = "input"; iNom.placeholder = "Ex. : Cotisation association";
+  iNom.maxLength = 40;
+  fNom.appendChild(iNom); form.appendChild(fNom);
+
+  var choixEmoji = EMOJIS[0];
+  var fEm = el("div", "field");
+  fEm.appendChild(el("label", null, "Icône"));
+  var wEm = el("div", "emojis");
+  EMOJIS.forEach(function(e, i){
+    var b = el("button", "em", e);
+    b.type = "button";
+    b.setAttribute("aria-pressed", i === 0 ? "true" : "false");
+    b.setAttribute("aria-label", "Icône " + e);
+    b.addEventListener("click", function(){
+      choixEmoji = e;
+      wEm.querySelectorAll(".em").forEach(function(x){ x.setAttribute("aria-pressed","false"); });
+      b.setAttribute("aria-pressed","true");
+    });
+    wEm.appendChild(b);
+  });
+  fEm.appendChild(wEm); form.appendChild(fEm);
+
+  var choixCoul = COULEURS[0];
+  var fC = el("div", "field");
+  fC.appendChild(el("label", null, "Couleur"));
+  var wC = el("div", "swatches");
+  COULEURS.forEach(function(c, i){
+    var b = el("button", "sw");
+    b.type = "button"; b.style.background = c;
+    b.setAttribute("aria-pressed", i === 0 ? "true" : "false");
+    b.setAttribute("aria-label", "Couleur " + (i+1));
+    b.addEventListener("click", function(){
+      choixCoul = c;
+      wC.querySelectorAll(".sw").forEach(function(x){ x.setAttribute("aria-pressed","false"); });
+      b.setAttribute("aria-pressed","true");
+    });
+    wC.appendChild(b);
+  });
+  fC.appendChild(wC); form.appendChild(fC);
+
+  var fG = el("div", "field");
+  fG.appendChild(el("label", null, "Groupe"));
+  var sG = document.createElement("select");
+  sG.className = "input";
+  GROUPES.forEach(function(g){
+    var o = document.createElement("option"); o.value = g; o.textContent = g; sG.appendChild(o);
+  });
+  fG.appendChild(sG); form.appendChild(fG);
+
+  var err = el("p", "tiny", "");
+  err.style.color = "var(--red)"; err.style.margin = "0 0 10px";
+  form.appendChild(err);
+
+  var rb = el("div", "row-btns");
+  var bAnn = el("button", "btn btn-ghost", "Annuler"); bAnn.type = "button";
+  var bCre = el("button", "btn btn-primary", "Créer la rubrique"); bCre.type = "button";
+  rb.appendChild(bAnn); rb.appendChild(bCre); form.appendChild(rb);
+  ec.appendChild(form);
+
+  bOuvrir.addEventListener("click", function(){
+    form.hidden = !form.hidden;
+    if(!form.hidden) iNom.focus();
+  });
+  bAnn.addEventListener("click", function(){ form.hidden = true; err.textContent = ""; });
+  bCre.addEventListener("click", function(){
+    var nom = iNom.value.trim();
+    if(!nom){ err.textContent = "Donnez un nom à la rubrique."; iNom.focus(); return; }
+    var doublon = S.rubriques.some(function(r){ return r.nom.toLowerCase() === nom.toLowerCase(); });
+    if(doublon){ err.textContent = "Cette rubrique existe déjà."; return; }
+    S.rubriques.push({
+      id: uid(), nom: nom, icone: choixEmoji, couleur: choixCoul,
+      groupe: sG.value, active: true, montant: 0, perso: true
+    });
+    sauver();
+    iNom.value = ""; err.textContent = ""; form.hidden = true;
+    dessiner(); majCompte();
+    try{ if(liste.lastChild.scrollIntoView) liste.lastChild.scrollIntoView({block:"center"}); }catch(e){}
+  });
+
+  /* --- barre --- */
+  var bar = el("div", "sticky"), inn = el("div", "sticky-in");
+  var doux = el("div", "doux", "Trop de rubriques tue le suivi.");
+  doux.hidden = true;
+  var info = el("p", "tiny muted", "");
+  info.style.margin = "0 0 8px";
+  var rowB = el("div", "row-btns");
+  if(!S.onboarded){
+    var bRet = el("button", "btn btn-ghost", "Retour"); bRet.type = "button";
+    bRet.addEventListener("click", function(){ aller("revenus"); });
+    rowB.appendChild(bRet);
+  }
+  var bSuite = el("button", "btn btn-primary", S.onboarded ? "Enregistrer" : "Continuer");
+  bSuite.type = "button";
+  bSuite.addEventListener("click", function(){ sauver(); aller(S.onboarded ? retourDe("rubriques") : "repartition"); });
+  rowB.appendChild(bSuite);
+  inn.appendChild(doux); inn.appendChild(info); inn.appendChild(rowB);
+  bar.appendChild(inn); ba.appendChild(bar);
+
+  function majCompte(){
+    var n = actives().length;
+    info.textContent = n === 0 ? "Cochez au moins une rubrique." : n + (n > 1 ? " rubriques sélectionnées" : " rubrique sélectionnée");
+    bSuite.disabled = n === 0;
+    /* F3 : message doux, jamais bloquant */
+    doux.hidden = n <= MAX_DOUX;
+  }
+  majCompte();
+}
+
+/* ==============================================================
+   ÉCRAN 3 — Répartition
+   ============================================================== */
+function vueRepartition(ec, ba){
+  ec.appendChild(el("h1", null, "Répartir vos revenus"));
+  ec.appendChild(el("p", "sub", "Donnez un montant à chaque enveloppe. Ce qui n'est pas réparti reste dans « Non affecté »."));
+
+  var tete = el("div", "card");
+  var tl = el("div");
+  tl.style.display = "flex"; tl.style.justifyContent = "space-between"; tl.style.alignItems = "baseline";
+  tl.appendChild(el("span", "muted small", "Total à répartir"));
+  tl.appendChild(el("span", "big", fmtF(totalRevenus())));
+  tete.appendChild(tl);
+  tete.appendChild(el("div", "tiny muted", "Reçu " + libelleJour()));
+  ec.appendChild(tete);
+
+  var pcts = {};
+  var liste = el("div");
+  liste.style.marginTop = "14px";
+  var pilote = {maj: function(){ maj(); }, reste: function(){ return reste(); }};
+  actives().forEach(function(r){
+    liste.appendChild(ligneRepartition(r, Number(r.montant) || 0, function(v){
+      r.montant = v; sauver(); maj();
+    }, pilote, pcts));
+  });
+  ec.appendChild(liste);
+  var aideL = el("p", "tiny muted",
+    "Une dépense qui ne tombe pas tous les mois — électricité, assurance, scolarité ? Appuyez sur « Lisser un montant » : MonDjai calcule la part à prévoir chaque mois.");
+  aideL.style.margin = "2px 0 0";
+  ec.appendChild(aideL);
+
+  /* --- barre --- */
+  var bar = el("div", "sticky"), inn = el("div", "sticky-in");
+  var banniere = el("div", "banner");
+  banniere.hidden = true;
+  var jw = el("div", "jauge-wrap");
+  var jauge = el("div", "jauge");
+  jw.appendChild(jauge);
+  var rl = el("div", "reste-line");
+  var gauche = el("div");
+  gauche.appendChild(el("div", "lab", "Reste à répartir"));
+  var val = el("div", "reste-val");
+  gauche.appendChild(val);
+  rl.appendChild(gauche);
+  var droite = el("div", "tiny muted num");
+  droite.style.textAlign = "right";
+  rl.appendChild(droite);
+
+  var rowB = el("div", "row-btns");
+  if(!S.onboarded){
+    var bRet = el("button", "btn btn-ghost", "Retour"); bRet.type = "button";
+    bRet.addEventListener("click", function(){ aller("rubriques"); });
+    rowB.appendChild(bRet);
+  }else{
+    var bRet2 = el("button", "btn btn-ghost", "Retour"); bRet2.type = "button";
+    bRet2.addEventListener("click", function(){ aller(retourDe("repartition")); });
+    rowB.appendChild(bRet2);
+  }
+  var bFin = el("button", "btn btn-primary", S.onboarded ? "Enregistrer" : "Voir mon tableau de bord");
+  bFin.type = "button";
+  bFin.addEventListener("click", function(){
+    if(!S.onboarded){
+      /* le premier cycle démarre à la dernière date de paie passée */
+      S.cycleDebut = debutCycleTheorique();
+      if(!S.cycleId) S.cycleId = uid();
+      S.onboarded = true; sauver(); aller("dashboard");
+      return;
+    }
+    sauver(); aller(retourDe("repartition"));
+  });
+  rowB.appendChild(bFin);
+
+  inn.appendChild(banniere); inn.appendChild(rl); inn.appendChild(jw); inn.appendChild(rowB);
+  bar.appendChild(inn); ba.appendChild(bar);
+
+  function maj(){
+    var tot = totalRevenus(), rep = totalReparti(), rst = tot - rep;
+    actives().forEach(function(r){
+      var p = tot > 0 ? Math.round((Number(r.montant)||0) / tot * 100) : 0;
+      pcts[r.id].textContent = p + "%";
+    });
+    droite.textContent = "Réparti : " + fmtF(rep) + " / " + fmtF(tot);
+    if(rst < 0){
+      val.textContent = fmtF(0);
+      val.className = "reste-val deficit";
+      banniere.hidden = false;
+      banniere.textContent = "Déficit à combler : " + fmtF(-rst);
+    }else{
+      val.textContent = fmtF(rst);
+      val.className = "reste-val" + (rst === 0 ? " ok" : "");
+      banniere.hidden = true;
+    }
+    dessinerJauge(jauge);
+  }
+  maj();
+}
+
+/* --- jauge segmentée (élément signature) --- */
+function dessinerJauge(jauge){
+  jauge.innerHTML = "";
+  var tot = totalRevenus(), rep = totalReparti();
+  var base = Math.max(tot, rep);
+  if(base <= 0){ jauge.appendChild(el("div", "seg seg-vide")); return; }
+  actives().forEach(function(r){
+    var m = Number(r.montant) || 0;
+    if(m <= 0) return;
+    var s = el("div", "seg");
+    s.style.width = (m / base * 100) + "%";
+    s.style.background = rep > tot ? "var(--red)" : r.couleur;
+    jauge.appendChild(s);
+  });
+  if(rep < tot){
+    var v = el("div", "seg seg-vide");
+    v.style.flex = "none";
+    v.style.width = ((tot - rep) / base * 100) + "%";
+    jauge.appendChild(v);
+  }
+}
+
+/* ==============================================================
+   SPRINT 2 — Saisie d'une dépense en 3 taps (F4)
+   1) bouton « + » flottant  2) grille des rubriques
+   3) montant (+ libellé facultatif + date) → validation
+   ============================================================== */
+var feuille = null; /* feuille plein écran ouverte, ou null */
+
+function boutonPlus(parent, rubriquePrechoisie){
+  var f = el("button", "fab", "+");
+  f.type = "button";
+  f.setAttribute("aria-label", "Ajouter une dépense");
+  f.addEventListener("click", function(){
+    ouvrirDepense({rubrique: rubriquePrechoisie || null});
+  });
+  parent.appendChild(f);
+  return f;
+}
+
+function fermerFeuille(viaRetour){
+  if(!feuille) return;
+  if(feuille.parentNode) feuille.parentNode.removeChild(feuille);
+  feuille = null;
+  document.body.style.overflow = "";
+  if(!viaRetour){ try{ history.back(); }catch(e){} }
+}
+/* Sprint 5A — bouton retour physique (Android) : ferme la feuille de
+   saisie si elle est ouverte, sinon revient à l'écran précédent. */
+window.addEventListener("popstate", function(e){
+  if(feuille){ fermerFeuille(true); return; }
+  var v = (e.state && e.state.mdVue) || (S.onboarded ? "dashboard" : "revenus");
+  if(v !== vue){ vue = v; render(); }
+});
+document.addEventListener("keydown", function(e){
+  if(e.key === "Escape" && feuille) fermerFeuille(false);
+});
+
+function ouvrirDepense(opts){
+  opts = opts || {};
+  var edition = opts.edit || null;
+  var editionPrevision = edition ? !!opts.prevision : false;
+  var etat = {
+    rubrique: edition ? edition.rubrique : (opts.rubrique || null),
+    montant:  edition ? (Number(edition.montant)||0) : 0,
+    libelle:  edition ? (edition.libelle || "") : "",
+    date:     edition ? edition.date : aujourdhui()
+  };
+
+  var sh = el("div", "sheet");
+  sh.setAttribute("role", "dialog");
+  sh.setAttribute("aria-modal", "true");
+
+  var top = el("div", "sheet-top");
+  var topIn = el("div", "sheet-top-in");
+  var bRetour = el("button", "icon-btn", "‹");
+  bRetour.type = "button"; bRetour.setAttribute("aria-label", "Retour aux rubriques");
+  var titre = el("div", "sheet-titre", edition ? "Modifier la dépense" : "Nouvelle dépense");
+  var bFermer = el("button", "icon-btn", "×");
+  bFermer.type = "button"; bFermer.setAttribute("aria-label", "Fermer");
+  bFermer.addEventListener("click", function(){ fermerFeuille(false); });
+  bRetour.addEventListener("click", function(){ etat.rubrique = null; dessiner(); });
+  topIn.appendChild(bRetour); topIn.appendChild(titre); topIn.appendChild(bFermer);
+  top.appendChild(topIn);
+  sh.appendChild(top);
+
+  var body = el("div", "sheet-body");
+  sh.appendChild(body);
+
+  document.body.appendChild(sh);
+  document.body.style.overflow = "hidden";
+  feuille = sh;
+  try{ history.pushState({mdFeuille:1}, ""); }catch(e){}
+
+  function dessiner(){
+    body.innerHTML = "";
+    bRetour.hidden = (etat.rubrique === null);
+    if(etat.rubrique === null) etapeGrille(); else etapeMontant();
+  }
+
+  /* ---- Tap 2 : la grille des rubriques ---- */
+  function etapeGrille(){
+    var act = actives();
+    titre.textContent = edition ? "Modifier la ligne" : "Nouvelle saisie";
+    body.appendChild(el("p", "sub", act.length ? "Dans quelle enveloppe ?" : "Aucune enveloppe active pour l'instant."));
+    if(!act.length){
+      var b = el("button", "btn", "Choisir mes rubriques");
+      b.type = "button";
+      b.addEventListener("click", function(){ fermerFeuille(false); aller("rubriques"); });
+      body.appendChild(b);
+      return;
+    }
+    var g = el("div", "grille-rub");
+    act.forEach(function(r){
+      var t = el("button", "tuile");
+      t.type = "button";
+      var ic = el("span", "ico", r.icone);
+      ic.style.background = "rgba(255,255,255,.05)";
+      ic.style.boxShadow = "inset 0 0 0 1px " + r.couleur + "55";
+      t.appendChild(ic);
+      t.appendChild(el("span", "t-nom", r.nom));
+      t.appendChild(jaugeRub(depenseRub(r.id), Number(r.montant)||0, estEpargne(r)));
+      t.addEventListener("click", function(){ etat.rubrique = r.id; dessiner(); });
+      g.appendChild(t);
+    });
+    body.appendChild(g);
+  }
+
+  /* ---- Tap 3 : montant, libellé facultatif, date ---- */
+  function etapeMontant(){
+    var r = rubriqueParId(etat.rubrique);
+    if(!r){ etat.rubrique = null; dessiner(); return; }
+    var ep = estEpargne(r);
+    titre.textContent = edition
+      ? (editionPrevision ? "Modifier la prévision" : (ep ? "Modifier le versement" : "Modifier la dépense"))
+      : (ep ? "Mettre de côté" : "Nouvelle dépense");
+
+    /* rappel de l'enveloppe choisie (retap = changer) */
+    var choisie = el("button", "rub-choisie");
+    choisie.type = "button";
+    var ic = el("span", "ico", r.icone);
+    ic.style.background = "rgba(255,255,255,.05)";
+    ic.style.boxShadow = "inset 0 0 0 1px " + r.couleur + "55";
+    choisie.appendChild(ic);
+    choisie.appendChild(el("span", "nom", r.nom));
+    choisie.appendChild(el("span", "chg", "Changer"));
+    choisie.addEventListener("click", function(){ etat.rubrique = null; dessiner(); });
+    body.appendChild(choisie);
+
+    /* montant */
+    var im = document.createElement("input");
+    im.type = "text"; im.inputMode = "numeric";
+    im.className = "montant-xl";
+    im.value = etat.montant ? fmt(etat.montant) : "";
+    im.placeholder = "0";
+    im.setAttribute("aria-label", "Montant de la dépense en francs CFA");
+    im.addEventListener("focus", function(){
+      setTimeout(function(){ try{ im.scrollIntoView({block:"center", behavior:"smooth"}); }catch(e){} }, 250);
+    });
+    im.addEventListener("input", function(){
+      var v = chiffres(im.value);
+      im.value = v ? fmt(v) : "";
+      etat.montant = v;
+      majInfo();
+    });
+    body.appendChild(im);
+    body.appendChild(el("div", "devise", "FRANCS CFA"));
+
+    /* information sur l'enveloppe — on informe, on ne bloque jamais */
+    var info = el("div", "info-env");
+    body.appendChild(info);
+
+    /* libellé facultatif */
+    var fL = el("div", "field");
+    fL.appendChild(el("label", null, "Libellé (facultatif)"));
+    var iL = document.createElement("input");
+    iL.type = "text"; iL.className = "input"; iL.maxLength = 60;
+    iL.placeholder = ep ? "Ex. : tontine, réserve, projet…" : "Ex. : gbaka, marché, taxi…";
+    iL.value = etat.libelle;
+    iL.addEventListener("input", function(){ etat.libelle = iL.value; });
+    fL.appendChild(iL);
+    body.appendChild(fL);
+
+    /* date : aujourd'hui par défaut, modifiable — Sprint 5B : une date
+       future ne compte pas dans le solde tant qu'elle n'est pas validée */
+    var fD = el("div", "field");
+    fD.appendChild(el("label", null, "Date"));
+    var chips = el("div", "chips");
+    chips.style.marginBottom = "8px";
+    var hier = new Date(); hier.setDate(hier.getDate() - 1);
+    var raccourcis = [{lab:"Aujourd'hui", val: aujourdhui()}, {lab:"Hier", val: iso(hier)}];
+    var iD = document.createElement("input");
+    iD.type = "date"; iD.className = "input"; iD.value = etat.date;
+    iD.setAttribute("aria-label", "Date de la dépense");
+    var indicPrevision = el("p", "tiny muted");
+    indicPrevision.style.margin = "8px 0 0";
+    raccourcis.forEach(function(rc){
+      var c = el("button", "chip", rc.lab);
+      c.type = "button";
+      c.setAttribute("aria-pressed", etat.date === rc.val ? "true" : "false");
+      c.addEventListener("click", function(){
+        etat.date = rc.val; iD.value = rc.val;
+        chips.querySelectorAll(".chip").forEach(function(x){ x.setAttribute("aria-pressed","false"); });
+        c.setAttribute("aria-pressed","true");
+        majInfo();
+      });
+      chips.appendChild(c);
+    });
+    iD.addEventListener("change", function(){
+      etat.date = iD.value || aujourdhui();
+      chips.querySelectorAll(".chip").forEach(function(x, i){
+        x.setAttribute("aria-pressed", etat.date === raccourcis[i].val ? "true" : "false");
+      });
+      majInfo();
+    });
+    fD.appendChild(chips);
+    fD.appendChild(iD);
+    fD.appendChild(indicPrevision);
+    body.appendChild(fD);
+
+    /* suppression si l'on modifie une dépense existante */
+    if(edition){
+      var bSup = el("button", "btn btn-danger",
+        editionPrevision ? "Supprimer cette prévision" : (ep ? "Supprimer ce versement" : "Supprimer cette dépense"));
+      bSup.type = "button";
+      bSup.style.marginTop = "18px";
+      bSup.addEventListener("click", function(){
+        if(confirm("Supprimer cette ligne de " + fmtF(edition.montant) + " ?")){
+          supprimerDepense(edition.id, editionPrevision);
+          fermerFeuille(false);
+          render();
+          toast(editionPrevision ? "Prévision supprimée" : "Dépense supprimée");
+        }
+      });
+      body.appendChild(bSup);
+    }
+
+    /* barre de validation */
+    var bar = el("div", "sticky"), inn = el("div", "sticky-in");
+    var bOk = el("button", "btn btn-primary", "");
+    bOk.type = "button";
+    bOk.addEventListener("click", enregistrer);
+    inn.appendChild(bOk);
+    bar.appendChild(inn);
+    sh.appendChild(bar);
+
+    im.addEventListener("keydown", function(e){
+      if(e.key === "Enter" && etat.montant > 0){ e.preventDefault(); enregistrer(); }
+    });
+
+    function majInfo(){
+      var futur = (etat.date || aujourdhui()) > aujourdhui();
+
+      /* Sprint 5B — une dépense datée dans le futur devient une prévision :
+         elle ne compte pas dans le solde tant qu'elle n'a pas été validée. */
+      if(futur){
+        indicPrevision.textContent = "📌 Cette date n'est pas encore arrivée : ce sera une prévision, elle ne comptera dans votre solde qu'une fois validée le jour venu.";
+        bOk.textContent = edition ? "Enregistrer la prévision" : "Prévoir cette dépense";
+      }else if(editionPrevision){
+        indicPrevision.textContent = "✓ Cette date est passée ou c'est aujourd'hui : en enregistrant, cette prévision devient une dépense réelle et comptera tout de suite dans votre solde.";
+        bOk.textContent = "Valider la dépense";
+      }else{
+        indicPrevision.textContent = "";
+        bOk.textContent = edition ? "Enregistrer les modifications" : (ep ? "Mettre de côté" : "Enregistrer la dépense");
+      }
+
+      var affecte = Number(r.montant) || 0;
+      var dejaSansMoi = depenseRub(r.id) - (edition && !editionPrevision ? (Number(edition.montant)||0) : 0);
+      var apres = dejaSansMoi + (futur ? 0 : (Number(etat.montant)||0));
+      var restant = affecte - apres;
+      var etatC = etatDe(apres, affecte, ep);
+      info.className = "info-env " + (affecte <= 0 && !ep ? "" :
+        etatC === "rouge" ? "rouge" : etatC === "orange" ? "orange" :
+        etatC === "attente" ? "attente" : "vert");
+      if(futur){
+        info.className = "info-env";
+        info.textContent = "Une prévision n'affecte pas encore « " + r.nom + " ».";
+      }else if(ep){
+        if(affecte <= 0){
+          info.textContent = "Aucun objectif fixé ici : tout ce que vous mettez de côté est du gagné.";
+        }else if(restant > 0){
+          info.textContent = "Après ce versement, il resterait " + fmtF(restant) + " à mettre de côté dans « " + r.nom + " ».";
+        }else if(restant === 0){
+          info.textContent = "Avec ce versement, l'objectif de « " + r.nom + " » est atteint. Bravo !";
+        }else{
+          info.textContent = "Vous dépasseriez l'objectif de " + fmtF(-restant) + ". Tant mieux : c'est de l'épargne en plus.";
+        }
+      }else if(affecte <= 0){
+        info.textContent = "Aucun montant n'est affecté à cette enveloppe pour l'instant.";
+      }else if(restant >= 0){
+        info.textContent = "Après cette dépense, il resterait " + fmtF(restant) + " dans « " + r.nom + " ».";
+      }else{
+        info.textContent = "Cette dépense dépasserait l'enveloppe de " + fmtF(-restant) + ". C'est possible, à vous de voir.";
+      }
+      bOk.disabled = !(Number(etat.montant) > 0);
+    }
+    majInfo();
+    setTimeout(function(){ try{ im.focus(); }catch(e){} }, 60);
+  }
+
+  function enregistrer(){
+    if(!(Number(etat.montant) > 0)) return;
+    var futur = (etat.date || aujourdhui()) > aujourdhui();
+    var champs = {
+      rubrique: etat.rubrique,
+      montant: Number(etat.montant) || 0,
+      libelle: (etat.libelle || "").trim(),
+      date: etat.date || aujourdhui()
+    };
+    var messageFinal;
+    if(edition){
+      Object.keys(champs).forEach(function(k){ edition[k] = champs[k]; });
+      if(editionPrevision && !futur){
+        /* la prévision est validée : elle devient une dépense réelle */
+        S.previsions = S.previsions.filter(function(x){ return x.id !== edition.id; });
+        S.depenses.push(edition);
+        messageFinal = "Dépense validée ✓";
+      }else if(!editionPrevision && futur){
+        /* la dépense est repoussée dans le futur : elle devient une prévision */
+        S.depenses = S.depenses.filter(function(x){ return x.id !== edition.id; });
+        S.previsions.push(edition);
+        messageFinal = "Déplacée en prévision pour le " + dateLisible(edition.date);
+      }else{
+        messageFinal = "Modification enregistrée";
+      }
+    }else{
+      var obj = champs; obj.id = uid(); obj.cree = Date.now();
+      if(futur){
+        S.previsions.push(obj);
+        messageFinal = "Dépense prévue pour le " + dateLisible(obj.date) + " ✓";
+      }else{
+        S.depenses.push(obj);
+        var rFin = rubriqueParId(obj.rubrique);
+        messageFinal = estEpargne(rFin) ? "Mis de côté ✓ Bravo" : "Dépense enregistrée ✓";
+      }
+    }
+    sauver();
+    fermerFeuille(false);
+    render();
+    toast(messageFinal);
+  }
+
+  dessiner();
+}
+
+/* Sprint 5B — valide une prévision échue : elle devient une dépense réelle
+   avec sa date prévue, sans repasser par la feuille de saisie. */
+function validerPrevision(id){
+  var it = null;
+  S.previsions.forEach(function(d){ if(d.id === id) it = d; });
+  if(!it) return;
+  S.previsions = S.previsions.filter(function(d){ return d.id !== id; });
+  S.depenses.push(it);
+  sauver();
+  render();
+  toast("Dépense validée ✓");
+}
+
+function supprimerDepense(id, estPrevision){
+  if(estPrevision){
+    S.previsions = S.previsions.filter(function(d){ return d.id !== id; });
+  }else{
+    S.depenses = S.depenses.filter(function(d){ return d.id !== id; });
+  }
+  sauver();
+}
+
+/* ==============================================================
+   ÉCRAN 4 — Accueil (F5)
+   Sprint 5A : allégé au strict essentiel. Le détail des enveloppes,
+   le journal complet et l'épargne ont désormais leur propre onglet.
+   ============================================================== */
+function vueDashboard(ec, ba){
+  var tot = totalRevenus(), rep = totalReparti(), rst = tot - rep;
+  var dep = totalDepense(), dispo = tot - dep;
+  var jours = joursAvantPaie();
+  var paie = prochainePaie();
+
+  ec.appendChild(el("h1", null, "Bonjour 👋"));
+  ec.appendChild(el("p", "sub", "Cycle en cours depuis le " + dateComplete(S.cycleDebut) + "."));
+
+  /* Sprint 5B — rappel des prévisions échues : c'est notre « alarme »,
+     affichée à l'ouverture, sans notification externe (l'app reste
+     100 % hors ligne, sans service de notification à distance). */
+  var previsionsEchues = (S.previsions || []).filter(function(p){ return p.date <= aujourdhui(); });
+  if(previsionsEchues.length){
+    var avP = el("div", "avis");
+    avP.appendChild(el("div", "avis-t",
+      previsionsEchues.length > 1 ? previsionsEchues.length + " prévisions à valider" : "1 prévision à valider"));
+    avP.appendChild(el("p", "avis-p",
+      "Vous aviez prévu " + (previsionsEchues.length > 1 ? "ces dépenses" : "cette dépense")
+      + " — confirmez-les pour qu'elles comptent dans votre solde."));
+    var bVoirP = el("button", "btn btn-primary", "Voir dans le Journal");
+    bVoirP.type = "button";
+    bVoirP.addEventListener("click", function(){ aller("journal"); });
+    avP.appendChild(bVoirP);
+    ec.appendChild(avP);
+  }
+
+  /* --- proposition de nouveau cycle au jour de paie (F1) --- */
+  if(cycleAEcheance()){
+    var av = el("div", "avis");
+    av.appendChild(el("div", "avis-t", "C'est le jour de la paie"));
+    av.appendChild(el("p", "avis-p",
+      "Vous pouvez clôturer ce cycle et en démarrer un nouveau. Vos revenus et votre répartition seront préremplis à partir du cycle en cours, et resteront modifiables."));
+    var bAv = el("button", "btn btn-primary", "J'ai reçu mon salaire");
+    bAv.type = "button";
+    bAv.addEventListener("click", ouvrirNouveauCycle);
+    av.appendChild(bAv);
+    ec.appendChild(av);
+  }
+
+  /* --- félicitations d'épargne après une clôture (F10) --- */
+  if(S.epargneFelicitee !== null && S.epargneFelicitee !== undefined){
+    var mEp = Number(S.epargneFelicitee) || 0;
+    var ave = el("div", "avis avis-vert");
+    ave.appendChild(el("div", "avis-t", mEp > 0 ? "Bravo, vous avez épargné" : "Nouveau cycle, nouvelle occasion"));
+    ave.appendChild(el("p", "avis-p", mEp > 0
+      ? "Sur le cycle qui vient d'être archivé, vous avez mis " + fmtF(mEp) + " de côté. C'est autant de tranquillité pour la suite."
+      : "Le cycle précédent est archivé. Ce mois-ci, même une petite somme mise de côté comptera."));
+    var bMerci = el("button", "btn btn-ghost", mEp > 0 ? "Merci !" : "C'est noté");
+    bMerci.type = "button";
+    bMerci.addEventListener("click", function(){ S.epargneFelicitee = null; sauver(); render(); });
+    ave.appendChild(bMerci);
+    ec.appendChild(ave);
+  }
+
+  /* --- rappel doux de sauvegarde après une clôture (F7) --- */
+  if(S.rappelSauvegarde){
+    var rs = el("div", "avis");
+    rs.appendChild(el("div", "avis-t", "Pensez à sauvegarder"));
+    rs.appendChild(el("p", "avis-p",
+      "Un cycle vient d'être archivé. Vos données vivent uniquement sur ce téléphone : un fichier de sauvegarde les met à l'abri."));
+    var rb2 = el("div", "row-btns");
+    var bS = el("button", "btn btn-primary", "Sauvegarder mes données"); bS.type = "button";
+    bS.addEventListener("click", sauvegarderDonnees);
+    var bP = el("button", "btn btn-ghost", "Plus tard"); bP.type = "button";
+    bP.addEventListener("click", function(){ S.rappelSauvegarde = false; sauver(); render(); });
+    rb2.appendChild(bP); rb2.appendChild(bS);
+    rs.appendChild(rb2);
+    ec.appendChild(rs);
+  }
+
+  /* --- en-tête : reste global + jours avant la prochaine paie --- */
+  var tete = el("div", "tb-tete");
+  tete.appendChild(el("div", "lab tiny muted", "IL VOUS RESTE"));
+  var grand = el("div", "big", fmtF(Math.max(dispo, 0)));
+  if(dispo < 0) grand.className = "big c-rouge";
+  tete.appendChild(grand);
+
+  if(jours){
+    var phrase = el("div", "small");
+    phrase.style.marginTop = "2px";
+    phrase.textContent = dispo >= 0
+      ? "pour " + motJours(jours) + ", jusqu'à la prochaine paie."
+      : "Vous avez dépensé " + fmtF(-dispo) + " de plus que vos revenus, à " + motJours(jours) + " de la paie.";
+    tete.appendChild(phrase);
+    var quand = el("div", "tiny muted", "Prochaine paie : " + paie.getDate() + " " + MOIS[paie.getMonth()] + ".");
+    quand.style.marginTop = "2px";
+    tete.appendChild(quand);
+  }
+
+  var jg = jaugeRub(dep, tot);
+  jg.style.marginTop = "12px";
+  tete.appendChild(jg);
+
+  var bas = el("div", "env-bas");
+  bas.appendChild(el("span", "muted", "Sorti : " + fmtF(dep) + " sur " + fmtF(tot)));
+  if(jours && dispo > 0){
+    bas.appendChild(el("span", "muted", "≈ " + fmtF(Math.floor(dispo / jours)) + " / jour"));
+  }
+  tete.appendChild(bas);
+  /* Sprint 4 — ce qui a été mis de côté n'est pas perdu : on le dit (F10) */
+  var epCycle = totalEpargne();
+  if(epCycle > 0){
+    tete.appendChild(el("div", "bravo", "dont " + fmtF(epCycle) + " mis de côté 👏"));
+  }
+  ec.appendChild(tete);
+
+  /* --- rappel du déficit de répartition (F2) --- */
+  if(rst < 0){
+    ec.appendChild(el("div", "banner", "Déficit à combler : " + fmtF(-rst)));
+  }
+
+  /* --- dernières dépenses (aperçu seulement — le journal complet a son onglet) --- */
+  var recentes = triDepenses(S.depenses).slice(0, 3);
+  var entete3 = el("div", "grp-t");
+  entete3.appendChild(el("h2", null, "Dernières dépenses"));
+  if(S.depenses.length > 3){
+    var bVoir = el("button", "lien", "Tout voir");
+    bVoir.type = "button";
+    bVoir.addEventListener("click", function(){ aller("journal"); });
+    entete3.appendChild(bVoir);
+  }
+  entete3.style.margin = "26px 0 10px";
+  ec.appendChild(entete3);
+  if(recentes.length){
+    var cr = el("div", "card");
+    recentes.forEach(function(d){ cr.appendChild(ligneDepense(d, true)); });
+    ec.appendChild(cr);
+  }else{
+    var vide = el("div", "card");
+    vide.appendChild(el("div", "vide-msg", "Aucune dépense saisie. Appuyez sur le bouton « + » pour commencer."));
+    ec.appendChild(vide);
+  }
+
+  /* --- cycle : bouton discret, sans le pavé explicatif du quotidien --- */
+  var bCyc = el("button", "btn btn-ghost", "J'ai reçu mon salaire");
+  bCyc.type = "button";
+  bCyc.style.marginTop = "18px";
+  bCyc.addEventListener("click", ouvrirNouveauCycle);
+  ec.appendChild(bCyc);
+
+  /* --- bouton « + » flottant (tap 1) --- */
+  boutonPlus(ba, null);
+}
+
+/* ==============================================================
+   Sprint 5A — ÉCRAN « Enveloppes »
+   Le détail complet, groupe par groupe, qui occupait tout l'accueil.
+   L'épargne (groupe Épargne & Investissement) a son propre onglet,
+   elle n'apparaît donc pas ici pour éviter le doublon.
+   ============================================================== */
+function vueEnveloppes(ec, ba){
+  var tot = totalRevenus(), rep = totalReparti(), rst = tot - rep;
+
+  ec.appendChild(el("h1", null, "Vos enveloppes"));
+  ec.appendChild(el("p", "sub", "Ce qui est affecté et ce qui a déjà été dépensé, groupe par groupe."));
+
+  var act = actives().filter(function(r){ return !estEpargne(r); });
+  if(act.length === 0){
+    var c0 = el("div", "card");
+    c0.appendChild(el("div", "vide-msg", "Aucune rubrique active. Ouvrez « Réglages › Mes rubriques » pour en choisir."));
+    ec.appendChild(c0);
+  }else{
+    groupesPresents(act).forEach(function(g){
+      var membres = membresGroupe(act, g);
+      if(!membres.length) return;
+      var affG = 0, depG = 0;
+      membres.forEach(function(r){
+        affG += Number(r.montant) || 0;
+        depG += depenseRub(r.id);
+      });
+      ec.appendChild(enteteGroupe(g, affG, depG, false));
+      membres.slice().sort(function(a,b){ return (b.montant||0) - (a.montant||0); })
+        .forEach(function(r){ ec.appendChild(carteEnveloppe(r, "enveloppes")); });
+    });
+  }
+
+  /* --- enveloppes désactivées (hors épargne) qui portent encore des dépenses --- */
+  var orphelines = S.rubriques.filter(function(r){ return !r.active && !estEpargne(r) && depenseRub(r.id) > 0; });
+  if(orphelines.length){
+    ec.appendChild(el("h2", null, "Rubriques désactivées"));
+    orphelines.forEach(function(r){ ec.appendChild(carteEnveloppe(r, "enveloppes")); });
+  }
+
+  /* --- non affecté --- */
+  ec.appendChild(el("h2", null, "Non affecté"));
+  var card = el("div", "card");
+  var l2 = el("div", "tb-ligne");
+  var p2b = el("span", "pastille");
+  p2b.style.background = "var(--muted)";
+  l2.appendChild(p2b);
+  l2.appendChild(el("span", "ico", "🗂️"));
+  l2.appendChild(el("span", "nom", "Reste à répartir"));
+  var m2 = el("div", "tb-mont", fmtF(Math.max(0, rst)));
+  m2.appendChild(el("small", null, "sur " + fmtF(tot)));
+  l2.appendChild(m2);
+  card.appendChild(l2);
+  ec.appendChild(card);
+
+  var bRep = el("button", "btn", "Modifier la répartition");
+  bRep.type = "button";
+  bRep.style.marginTop = "10px";
+  bRep.addEventListener("click", function(){ ouvrirVue("repartition", "enveloppes"); });
+  ec.appendChild(bRep);
+
+  boutonPlus(ba, null);
+}
+
+/* ==============================================================
+   Sprint 5A — ÉCRAN « Journal »
+   Historique chronologique complet des dépenses du cycle en cours.
+   ============================================================== */
+function vueJournal(ec, ba){
+  var liste = triDepenses(S.depenses);
+  ec.appendChild(el("h1", null, "Journal"));
+  ec.appendChild(el("p", "sub", liste.length
+    ? fmtF(totalDepense()) + " dépensés sur ce cycle, " + liste.length + (liste.length > 1 ? " lignes." : " ligne.")
+    : "Aucune dépense saisie sur ce cycle pour l'instant."));
+
+  /* Sprint 5B — prévisions : dépenses annoncées à l'avance, qui ne
+     comptent dans rien tant qu'elles n'ont pas été validées. */
+  var prevs = (S.previsions || []).slice().sort(function(a,b){ return a.date < b.date ? -1 : 1; });
+  if(prevs.length){
+    var echues = prevs.filter(function(p){ return p.date <= aujourdhui(); }).length;
+    ec.appendChild(el("h2", null, "Prévisions" + (echues ? " · " + echues + " à valider" : "")));
+    var cp = el("div", "card");
+    prevs.forEach(function(p){ cp.appendChild(ligneDepense(p, true, true)); });
+    ec.appendChild(cp);
+    var aidePrev = el("p", "tiny muted",
+      "Une prévision ne compte dans votre solde qu'une fois validée — appuyez sur ✓ le jour venu, ou modifiez-la si le montant change.");
+    aidePrev.style.margin = "8px 0 20px";
+    ec.appendChild(aidePrev);
+  }
+
+  ec.appendChild(el("h2", null, "Dépenses"));
+  if(!liste.length){
+    var c0 = el("div", "card");
+    c0.appendChild(el("div", "vide-msg", "Appuyez sur le bouton « + » pour enregistrer votre première dépense."));
+    ec.appendChild(c0);
+  }else{
+    var card = el("div", "card");
+    liste.forEach(function(d){ card.appendChild(ligneDepense(d, true)); });
+    ec.appendChild(card);
+  }
+
+  boutonPlus(ba, null);
+}
+
+/* ==============================================================
+   Sprint 5A — ÉCRAN « Épargne »
+   Traitement positif isolé (F10) : jamais de rouge, on célèbre.
+   ============================================================== */
+function vueEpargne(ec, ba){
+  var membres = membresGroupe(actives(), GROUPE_EPARGNE);
+  var mis = totalEpargne();
+  var objectif = membres.reduce(function(t,r){ return t + (Number(r.montant)||0); }, 0);
+
+  ec.appendChild(el("h1", null, "💰 Épargne"));
+  ec.appendChild(el("p", "sub", "Ce que vous mettez de côté ne passe jamais au rouge ici."));
+
+  var tete = el("div", "tb-tete");
+  tete.appendChild(el("div", "lab tiny muted", "MIS DE CÔTÉ CE CYCLE-CI"));
+  tete.appendChild(el("div", "big c-vert", fmtF(mis)));
+  if(objectif > 0){
+    var jg = jaugeRub(mis, objectif, true);
+    jg.style.marginTop = "12px";
+    tete.appendChild(jg);
+    var sousT = el("div", "tiny muted", motEpargne(mis, objectif));
+    sousT.style.marginTop = "6px";
+    tete.appendChild(sousT);
+  }
+  ec.appendChild(tete);
+
+  if(!membres.length){
+    var c0 = el("div", "card");
+    c0.appendChild(el("div", "vide-msg",
+      "Aucune rubrique d'épargne active. Activez « Épargne / Tontine », « Fonds d'imprévus » ou une autre dans Réglages › Mes rubriques."));
+    ec.appendChild(c0);
+    var bAct = el("button", "btn", "Choisir mes rubriques");
+    bAct.type = "button";
+    bAct.style.marginTop = "10px";
+    bAct.addEventListener("click", function(){ ouvrirVue("rubriques", "epargne"); });
+    ec.appendChild(bAct);
+  }else{
+    ec.appendChild(el("h2", null, "Vos rubriques d'épargne"));
+    membres.slice().sort(function(a,b){ return (b.montant||0) - (a.montant||0); })
+      .forEach(function(r){ ec.appendChild(carteEnveloppe(r, "epargne")); });
+  }
+
+  /* --- rubriques d'épargne désactivées qui portent encore des versements --- */
+  var orphEp = S.rubriques.filter(function(r){ return !r.active && estEpargne(r) && depenseRub(r.id) > 0; });
+  if(orphEp.length){
+    ec.appendChild(el("h2", null, "Rubriques désactivées"));
+    orphEp.forEach(function(r){ ec.appendChild(carteEnveloppe(r, "epargne")); });
+  }
+
+  boutonPlus(ba, null);
+}
+
+/* --- carte d'une enveloppe avec sa jauge ---
+   Sprint 4 : dans l'épargne, on « met de côté » et rien ne passe au rouge (F10).
+   Sprint 5A : « origine » mémorise l'onglet d'où l'on vient, pour un bouton
+   retour juste sur l'écran de détail. */
+function carteEnveloppe(r, origine){
+  var ep = estEpargne(r);
+  var affecte = Number(r.montant) || 0;
+  var d = depenseRub(r.id);
+  var etat = etatDe(d, affecte, ep);
+  var reste = affecte - d;
+
+  var b = el("button", "env" + (etat === "rouge" ? " alerte" : ""));
+  b.type = "button";
+  b.setAttribute("aria-label", (ep ? "Voir les versements de " : "Voir les dépenses de ") + r.nom);
+
+  var haut = el("div", "env-haut");
+  var ic = el("span", "ico", r.icone);
+  ic.style.background = "rgba(255,255,255,.05)";
+  ic.style.boxShadow = "inset 0 0 0 1px " + r.couleur + "55";
+  haut.appendChild(ic);
+  haut.appendChild(el("span", "nom", r.nom));
+  if(!r.active) haut.appendChild(el("span", "tag", "désactivée"));
+  var m = el("div", "env-mont", fmtF(d));
+  m.appendChild(el("small", null, (ep ? "objectif " : "sur ") + fmtF(affecte)));
+  haut.appendChild(m);
+  haut.appendChild(el("span", "chev", "›"));
+  b.appendChild(haut);
+
+  b.appendChild(jaugeRub(d, affecte, ep));
+
+  var bas = el("div", "env-bas");
+  var gauche = affecte > 0
+    ? pct(d / affecte * 100) + (ep ? " de l'objectif" : " utilisé")
+    : (d > 0 ? (ep ? "mis de côté" : "hors enveloppe") : "rien d'affecté");
+  bas.appendChild(el("span", classeEtat(etat), gauche));
+  if(ep){
+    bas.appendChild(el("span", classeEtat(etat), motEpargne(d, affecte)));
+  }else{
+    bas.appendChild(el("span", reste < 0 ? "c-rouge" : "muted",
+      reste >= 0 ? "Reste " + fmtF(reste) : "Dépassement de " + fmtF(-reste)));
+  }
+  b.appendChild(bas);
+
+  var rl = rappelLissage(r);
+  if(rl && (r.periodicite || "mensuel") !== "mensuel"){
+    var lr = el("div", "tiny muted", rl);
+    lr.style.marginTop = "6px";
+    b.appendChild(lr);
+  }
+
+  b.addEventListener("click", function(){ ouvrirRubrique(r.id, origine); });
+  return b;
+}
+
+/* --- une ligne de dépense (modifiable / supprimable) --- */
+function ligneDepense(d, avecRubrique, estPrevision){
+  var r = rubriqueParId(d.rubrique);
+  var ligne = el("div", "dep");
+
+  var main = el("button", "dep-main");
+  main.type = "button";
+  main.setAttribute("aria-label", estPrevision ? "Modifier cette prévision" : "Modifier cette dépense");
+  var ic = el("span", "ico", r ? r.icone : "💸");
+  if(r){
+    ic.style.background = "rgba(255,255,255,.05)";
+    ic.style.boxShadow = "inset 0 0 0 1px " + r.couleur + "55";
+  }
+  main.appendChild(ic);
+  var txt = el("div", "d-txt");
+  txt.appendChild(el("div", "d-lib", d.libelle || (r ? r.nom : "Dépense")));
+  var sous = estPrevision ? "Prévue le " + dateLisible(d.date) : dateLisible(d.date);
+  if(avecRubrique && r && d.libelle) sous += " · " + r.nom;
+  txt.appendChild(el("div", "d-date", sous));
+  main.appendChild(txt);
+  main.appendChild(el("div", "d-mont", fmtF(d.montant)));
+  main.addEventListener("click", function(){ ouvrirDepense({edit: d, prevision: !!estPrevision}); });
+  ligne.appendChild(main);
+
+  /* Sprint 5B — prévision échue : validation en un tap, sans repasser
+     par la feuille de saisie */
+  if(estPrevision && d.date <= aujourdhui()){
+    var bVal = el("button", "del", "✓");
+    bVal.type = "button";
+    bVal.title = "Valider maintenant";
+    bVal.setAttribute("aria-label", "Valider cette prévision de " + fmt(d.montant) + " francs maintenant");
+    bVal.style.color = "var(--green)";
+    bVal.addEventListener("click", function(){ validerPrevision(d.id); });
+    ligne.appendChild(bVal);
+  }
+
+  var sup = el("button", "del", "×");
+  sup.type = "button";
+  sup.title = "Supprimer";
+  sup.setAttribute("aria-label", "Supprimer cette " + (estPrevision ? "prévision" : "dépense") + " de " + fmt(d.montant) + " francs");
+  sup.addEventListener("click", function(){
+    if(confirm("Supprimer cette ligne de " + fmtF(d.montant) + " ?")){
+      supprimerDepense(d.id, !!estPrevision);
+      render();
+      toast(estPrevision ? "Prévision supprimée" : "Dépense supprimée");
+    }
+  });
+  ligne.appendChild(sup);
+  return ligne;
+}
+
+/* ==============================================================
+   ÉCRAN 5 — Détail d'une rubrique et de ses dépenses
+   ============================================================== */
+function vueRubriqueDetail(ec, ba){
+  var r = rubriqueParId(rubOuverte);
+  if(!r){ aller("dashboard"); return; }
+
+  var ep = estEpargne(r);
+  var affecte = Number(r.montant) || 0;
+  var d = depenseRub(r.id);
+  var etat = etatDe(d, affecte, ep);
+  var reste = affecte - d;
+
+  var origine = retourDe("rubrique");
+  var labelOrigine = origine === "epargne" ? "Épargne" : "Enveloppes";
+  ec.appendChild(boutonRetour(labelOrigine, origine));
+
+  var t = el("h1", null, r.icone + " " + r.nom);
+  ec.appendChild(t);
+  var sousT = r.groupe;
+  var rl = rappelLissage(r);
+  if(rl && (r.periodicite || "mensuel") !== "mensuel") sousT += " · " + rl;
+  ec.appendChild(el("p", "sub", sousT));
+
+  /* résumé */
+  var carte = el("div", "tb-tete");
+  var haut = el("div", "env-haut");
+  var bloc = el("div");
+  bloc.style.flex = "1";
+  bloc.appendChild(el("div", "lab tiny muted", ep ? "MIS DE CÔTÉ" : "DÉPENSÉ"));
+  var gr = el("div", "big", fmtF(d));
+  if(etat === "rouge") gr.className = "big c-rouge";
+  if(ep && d > 0) gr.className = "big c-vert";
+  bloc.appendChild(gr);
+  bloc.appendChild(el("div", "tiny muted", (ep ? "sur un objectif de " : "sur ") + fmtF(affecte) + (ep ? "" : " affectés")));
+  haut.appendChild(bloc);
+  carte.appendChild(haut);
+  var jg = jaugeRub(d, affecte, ep);
+  jg.style.marginTop = "10px";
+  carte.appendChild(jg);
+  var bas = el("div", "env-bas");
+  bas.appendChild(el("span", classeEtat(etat),
+    affecte > 0 ? pct(d / affecte * 100) + (ep ? " de l'objectif" : " utilisé") : "rien d'affecté"));
+  if(ep){
+    bas.appendChild(el("span", classeEtat(etat), motEpargne(d, affecte)));
+  }else{
+    bas.appendChild(el("span", reste < 0 ? "c-rouge" : "muted",
+      reste >= 0 ? "Reste " + fmtF(reste) : "Dépassement de " + fmtF(-reste)));
+  }
+  carte.appendChild(bas);
+  ec.appendChild(carte);
+
+  if(ep && d > affecte && affecte > 0){
+    ec.appendChild(el("p", "small c-vert", "Vous avez mis plus que prévu de côté. C'est une réussite, pas un dépassement."));
+  }else if(!ep && reste < 0){
+    ec.appendChild(el("p", "small muted", "L'enveloppe est dépassée. MonDjai ne bloque rien : à vous de décider où prendre la différence."));
+  }
+
+  /* liste des dépenses (ou des versements) */
+  var liste = triDepenses(depensesDe(r.id));
+  var mot = ep ? "versements" : "dépenses";
+  ec.appendChild(el("h2", null, liste.length ? "Ses " + mot + " (" + liste.length + ")" : "Ses " + mot));
+  var card = el("div", "card");
+  if(!liste.length){
+    card.appendChild(el("div", "vide-msg", ep
+      ? "Rien n'a encore été mis de côté ici. Le bouton « + » est là pour ça."
+      : "Aucune dépense dans cette enveloppe pour l'instant."));
+  }else{
+    liste.forEach(function(dep){ card.appendChild(ligneDepense(dep, false)); });
+  }
+  ec.appendChild(card);
+
+  var aide = el("p", "tiny muted", "Appuyez sur une ligne pour la modifier, ou sur × pour la supprimer.");
+  aide.style.margin = "10px 0 0";
+  ec.appendChild(aide);
+
+  /* modifier le montant affecté */
+  var bRep = el("button", "btn", ep ? "Modifier l'objectif" : "Modifier la répartition");
+  bRep.type = "button";
+  bRep.style.marginTop = "18px";
+  bRep.addEventListener("click", function(){ ouvrirVue("repartition", origine); });
+  ec.appendChild(bRep);
+
+  /* « + » pré-réglé sur cette enveloppe : 2 taps */
+  boutonPlus(ba, r.id);
+}
+
+/* ==============================================================
+   ÉCRAN 6 — Nouveau cycle (F1)
+   Revenus et répartition préremplis à partir du cycle en cours,
+   modifiables avant validation. L'ancien cycle est archivé.
+   ============================================================== */
+function vueNouveauCycle(ec, ba){
+  if(!brouillonCycle){ ouvrirNouveauCycle(); return; }
+  var b = brouillonCycle;
+
+  var bRet = el("button", "btn btn-ghost btn-line", "‹ Accueil");
+  bRet.type = "button";
+  bRet.style.marginBottom = "14px";
+  bRet.addEventListener("click", function(){ brouillonCycle = null; aller("dashboard"); });
+  ec.appendChild(bRet);
+
+  ec.appendChild(el("h1", null, "J'ai reçu mon salaire"));
+  ec.appendChild(el("p", "sub",
+    "Tout est prérempli à partir du cycle en cours : ajustez ce qui a changé, puis validez. Le cycle démarré le "
+    + dateComplete(S.cycleDebut) + " sera archivé avec ses dépenses."));
+  var epEnCours = totalEpargne();
+  if(epEnCours > 0){
+    var bv = el("p", "bravo", "Sur le cycle qui se termine, vous avez mis " + fmtF(epEnCours) + " de côté. Beau travail.");
+    bv.style.margin = "-14px 0 18px";
+    ec.appendChild(bv);
+  }
+
+  /* --- revenus du nouveau cycle --- */
+  ec.appendChild(el("h2", null, "Revenus de ce cycle"));
+  var liste = el("div");
+  ec.appendChild(liste);
+
+  function dessinerRevenus(){
+    liste.innerHTML = "";
+    b.revenus.forEach(function(rev, idx){
+      var l = el("div", "ligne");
+      var lib = document.createElement("input");
+      lib.type = "text"; lib.className = "lib"; lib.value = rev.libelle;
+      lib.placeholder = "Nom du revenu";
+      lib.setAttribute("aria-label", "Nom du revenu");
+      lib.addEventListener("input", function(){ rev.libelle = lib.value; });
+      l.appendChild(lib);
+      l.appendChild(champMontant(rev.montant, function(v){ rev.montant = v; maj(); }));
+      if(idx > 0){
+        var d = el("button", "del", "×");
+        d.type = "button"; d.title = "Retirer ce revenu";
+        d.setAttribute("aria-label", "Retirer " + (rev.libelle || "ce revenu"));
+        d.addEventListener("click", function(){
+          b.revenus = b.revenus.filter(function(x){ return x.id !== rev.id; });
+          dessinerRevenus(); maj();
+        });
+        l.appendChild(d);
+      }
+      liste.appendChild(l);
+      /* Sprint 5B — date propre à ce revenu, jamais celle du salaire par
+         défaut : « Autre / Prime / Activités » n'arrivent pas forcément
+         le jour de la paie. */
+      if(idx > 0){
+        var fd = el("div", "champ-date");
+        fd.appendChild(el("span", "tiny muted", "Reçu le"));
+        var id_ = document.createElement("input");
+        id_.type = "date"; id_.className = "input-date";
+        id_.value = rev.date || "";
+        id_.setAttribute("aria-label", "Date de réception de " + (rev.libelle || "ce revenu"));
+        id_.addEventListener("change", function(){ rev.date = id_.value || null; });
+        fd.appendChild(id_);
+        liste.appendChild(fd);
+      }
+    });
+  }
+  dessinerRevenus();
+
+  var bAjout = el("button", "btn btn-ghost", "+ Ajouter un revenu");
+  bAjout.type = "button";
+  var menu = el("div", "menu");
+  menu.hidden = true;
+  TYPES_REVENU.forEach(function(t){
+    var bt = el("button", null, t);
+    bt.type = "button";
+    bt.addEventListener("click", function(){
+      b.revenus.push({id: uid(), libelle: (t === "Autre" ? "" : t), montant: 0, date: aujourdhui()});
+      menu.hidden = true; dessinerRevenus(); maj();
+    });
+    menu.appendChild(bt);
+  });
+  bAjout.addEventListener("click", function(){ menu.hidden = !menu.hidden; });
+  ec.appendChild(bAjout);
+  ec.appendChild(menu);
+
+  var tot = el("div", "total-ligne");
+  tot.appendChild(el("span", "muted small", "Total des revenus"));
+  var totVal = el("span", "big");
+  tot.appendChild(totVal);
+  ec.appendChild(tot);
+
+  /* Sprint 5B — si le total a changé par rapport au cycle précédent,
+     on propose (sans l'imposer) de recalculer la répartition :
+     charges fixes inchangées, épargne proportionnelle, le reste ajusté. */
+  var avisRecalc = el("div", "avis");
+  avisRecalc.hidden = true;
+  ec.appendChild(avisRecalc);
+
+  /* --- répartition du nouveau cycle, par groupe --- */
+  ec.appendChild(el("h2", null, "Répartition"));
+  var aideL2 = el("p", "tiny muted",
+    "L'assistant de lissage reste disponible ici : « Lisser un montant » recalcule la part mensuelle d'une dépense qui ne tombe pas tous les mois.");
+  aideL2.style.margin = "0 0 12px";
+  ec.appendChild(aideL2);
+  var act = actives();
+  var pcts = {};
+  if(!act.length){
+    var c0 = el("div", "card");
+    c0.appendChild(el("div", "vide-msg", "Aucune rubrique active. Ouvrez « Rubriques » pour en choisir."));
+    ec.appendChild(c0);
+  }else{
+    groupesPresents(act).forEach(function(g){
+      var membres = membresGroupe(act, g);
+      if(!membres.length) return;
+      var h = el("div", "grp");
+      var ht = el("div", "grp-t");
+      ht.appendChild(el("span", "grp-nom", g));
+      var sous = el("span", "grp-mont", "");
+      ht.appendChild(sous);
+      h.appendChild(ht);
+      h.dataset.groupe = g;
+      ec.appendChild(h);
+      pcts["__grp_" + g] = sous;
+
+      var pilote = {
+        maj: function(){ maj(); },
+        reste: function(){ return brTotalRevenus() - brTotalReparti(); }
+      };
+      membres.forEach(function(r){
+        ec.appendChild(ligneRepartition(r, Number(b.montants[r.id]) || 0, function(v){
+          b.montants[r.id] = v; maj();
+        }, pilote, pcts));
+      });
+    });
+  }
+
+  /* --- barre --- */
+  var bar = el("div", "sticky"), inn = el("div", "sticky-in");
+  var banniere = el("div", "banner");
+  banniere.hidden = true;
+  var rl = el("div", "reste-line");
+  var gauche = el("div");
+  gauche.appendChild(el("div", "lab", "Reste à répartir"));
+  var val = el("div", "reste-val");
+  gauche.appendChild(val);
+  rl.appendChild(gauche);
+  var droite = el("div", "tiny muted num");
+  droite.style.textAlign = "right";
+  rl.appendChild(droite);
+
+  var rowB = el("div", "row-btns");
+  var bAnn = el("button", "btn btn-ghost", "Annuler"); bAnn.type = "button";
+  bAnn.addEventListener("click", function(){ brouillonCycle = null; aller("dashboard"); });
+  var bOk = el("button", "btn btn-primary", "Démarrer le cycle"); bOk.type = "button";
+  bOk.addEventListener("click", function(){
+    var dep = totalDepense();
+    var msg = "Démarrer un nouveau cycle ?\n\nLe cycle en cours (depuis le " + dateComplete(S.cycleDebut) + ") "
+            + "sera archivé avec ses " + S.depenses.length + (S.depenses.length > 1 ? " dépenses" : " dépense")
+            + " (" + fmt(dep) + " F). Vous le retrouverez dans l'Historique.";
+    if(confirm(msg)) validerNouveauCycle();
+  });
+  rowB.appendChild(bAnn); rowB.appendChild(bOk);
+
+  inn.appendChild(banniere); inn.appendChild(rl); inn.appendChild(rowB);
+  bar.appendChild(inn); ba.appendChild(bar);
+
+  function maj(){
+    var t = brTotalRevenus(), rep = brTotalReparti(), rst = t - rep;
+    totVal.textContent = fmtF(t);
+    act.forEach(function(r){
+      var m = Number(b.montants[r.id]) || 0;
+      pcts[r.id].textContent = (t > 0 ? Math.round(m / t * 100) : 0) + "%";
+    });
+    groupesPresents(act).forEach(function(g){
+      if(!pcts["__grp_" + g]) return;
+      var s = 0;
+      membresGroupe(act, g).forEach(function(r){ s += Number(b.montants[r.id]) || 0; });
+      pcts["__grp_" + g].textContent = fmtF(s);
+    });
+    droite.textContent = "Réparti : " + fmtF(rep) + " / " + fmtF(t);
+    if(rst < 0){
+      val.textContent = fmtF(0);
+      val.className = "reste-val deficit";
+      banniere.hidden = false;
+      banniere.textContent = "Déficit à combler : " + fmtF(-rst);
+    }else{
+      val.textContent = fmtF(rst);
+      val.className = "reste-val" + (rst === 0 ? " ok" : "");
+      banniere.hidden = true;
+    }
+    bOk.disabled = !(t > 0);
+
+    /* Sprint 5B — proposition de recalcul si les revenus ont changé */
+    var changement = b.totalOrigine > 0 && t !== b.totalOrigine;
+    var dejaDecide = b.derniereDecisionTotal === t;
+    if(changement && !dejaDecide){
+      avisRecalc.hidden = false;
+      avisRecalc.innerHTML = "";
+      var signe = t > b.totalOrigine ? "+" : "";
+      avisRecalc.appendChild(el("div", "avis-t", "Vos revenus ont changé"));
+      avisRecalc.appendChild(el("p", "avis-p",
+        fmtF(b.totalOrigine) + " → " + fmtF(t) + " (" + signe + fmtF(t - b.totalOrigine) + "). "
+        + "Recalculer la répartition ? Les charges fixes restent identiques, l'épargne suit vos revenus, le reste s'ajuste."));
+      var rBtns = el("div", "row-btns");
+      var bGarder = el("button", "btn btn-ghost", "Garder mes montants"); bGarder.type = "button";
+      bGarder.addEventListener("click", function(){
+        b.derniereDecisionTotal = t; avisRecalc.hidden = true;
+      });
+      var bRecalc = el("button", "btn btn-primary", "Recalculer"); bRecalc.type = "button";
+      bRecalc.addEventListener("click", function(){
+        recalculerRepartitionAuto();
+        b.derniereDecisionTotal = t;
+        aller("nouveauCycle"); /* on redessine l'écran : les champs affichent les nouveaux montants */
+        toast("Répartition recalculée ✓");
+      });
+      rBtns.appendChild(bGarder); rBtns.appendChild(bRecalc);
+      avisRecalc.appendChild(rBtns);
+    }else{
+      avisRecalc.hidden = true;
+    }
+  }
+  maj();
+}
+
+/* ==============================================================
+   ÉCRAN 7 — Historique des cycles (F6)
+   ============================================================== */
+function vueHistorique(ec, ba){
+  var cible = retourDe("historique");
+  ec.appendChild(boutonRetour(cible === "reglages" ? "Réglages" : "Accueil", cible));
+
+  ec.appendChild(el("h1", null, "Historique"));
+  ec.appendChild(el("p", "sub", "Vos cycles clôturés, du plus récent au plus ancien."));
+
+  if(!S.cycles.length){
+    var c0 = el("div", "card");
+    c0.appendChild(el("div", "vide-msg",
+      "Aucun cycle archivé pour l'instant. Votre premier cycle apparaîtra ici le jour où vous démarrerez le suivant."));
+    ec.appendChild(c0);
+  }else{
+    S.cycles.forEach(function(c){
+      var rev = cycRevenus(c), dep = cycDepense(c), ecart = rev - dep;
+      var b = el("button", "cyc");
+      b.type = "button";
+      b.setAttribute("aria-label", "Ouvrir le cycle du " + periodeCycle(c));
+
+      var h = el("div", "cyc-h");
+      h.appendChild(el("span", "cyc-per", periodeCycle(c)));
+      h.appendChild(el("span", "chev", "›"));
+      b.appendChild(h);
+
+      var g = el("div", "cyc-g");
+      var d1 = el("div", null, "REVENUS");
+      d1.insertBefore(el("b", null, fmtF(rev)), d1.firstChild);
+      var d2 = el("div", null, "DÉPENSÉ");
+      d2.insertBefore(el("b", null, fmtF(dep)), d2.firstChild);
+      var d3 = el("div", null, ecart >= 0 ? "RESTÉ" : "DÉPASSEMENT");
+      d3.insertBefore(el("b", ecart >= 0 ? "c-vert" : "c-rouge", fmtF(Math.abs(ecart))), d3.firstChild);
+      g.appendChild(d1); g.appendChild(d2); g.appendChild(d3);
+      b.appendChild(g);
+
+      b.appendChild(jaugeRub(dep, rev));
+      var epC = cycEpargne(c);
+      if(epC > 0) b.appendChild(el("div", "bravo", fmtF(epC) + " mis de côté 👏"));
+      b.addEventListener("click", function(){ ouvrirCycle(c.id); });
+      ec.appendChild(b);
+    });
+  }
+
+  ec.appendChild(el("h2", null, "Vos données"));
+  ec.appendChild(blocSauvegarde());
+  var aide = el("p", "tiny muted",
+    "La sauvegarde contient tout : cycles archivés, rubriques, répartition et dépenses. Gardez le fichier quelque part de sûr — c'est votre seule copie.");
+  aide.style.margin = "10px 0 0";
+  ec.appendChild(aide);
+}
+
+/* ==============================================================
+   ÉCRAN 8 — Un cycle archivé, en lecture seule (F6)
+   ============================================================== */
+function vueCycleArchive(ec, ba){
+  var c = cycleParId(cycleOuvert);
+  if(!c){ aller("historique"); return; }
+
+  var rev = cycRevenus(c), rep = cycReparti(c), dep = cycDepense(c);
+  var ecart = rev - dep;
+
+  ec.appendChild(boutonRetour("Historique", "historique"));
+
+  ec.appendChild(el("h1", null, "Cycle clôturé"));
+  var sub = el("p", "sub", periodeCycle(c));
+  ec.appendChild(sub);
+  var badge = el("span", "lecture", "Lecture seule");
+  ec.appendChild(badge);
+
+  /* --- synthèse --- */
+  var tete = el("div", "tb-tete");
+  tete.style.marginTop = "16px";
+  tete.appendChild(el("div", "lab tiny muted", "DÉPENSÉ SUR CE CYCLE"));
+  var grand = el("div", "big", fmtF(dep));
+  if(dep > rev) grand.className = "big c-rouge";
+  tete.appendChild(grand);
+  tete.appendChild(el("div", "tiny muted", "sur " + fmtF(rev) + " de revenus"));
+  var jg = jaugeRub(dep, rev);
+  jg.style.marginTop = "12px";
+  tete.appendChild(jg);
+  var bas = el("div", "env-bas");
+  bas.appendChild(el("span", "muted", "Réparti : " + fmtF(rep)));
+  bas.appendChild(el("span", ecart >= 0 ? "c-vert" : "c-rouge",
+    ecart >= 0 ? "Resté " + fmtF(ecart) : "Dépassement de " + fmtF(-ecart)));
+  tete.appendChild(bas);
+  var epC2 = cycEpargne(c);
+  if(epC2 > 0){
+    tete.appendChild(el("div", "bravo", "dont " + fmtF(epC2) + " mis de côté 👏"));
+  }
+  ec.appendChild(tete);
+
+  /* --- revenus --- */
+  ec.appendChild(el("h2", null, "Revenus"));
+  var cr = el("div", "card");
+  if(!c.revenus.length){
+    cr.appendChild(el("div", "vide-msg", "Aucun revenu enregistré sur ce cycle."));
+  }else{
+    c.revenus.forEach(function(r){
+      var l = el("div", "ro");
+      var h = el("div", "ro-h");
+      h.appendChild(el("span", "nom", r.libelle || "Revenu"));
+      h.appendChild(el("div", "ro-m", fmtF(r.montant)));
+      l.appendChild(h);
+      cr.appendChild(l);
+    });
+    var lt = el("div", "ro");
+    var ht = el("div", "ro-h");
+    ht.appendChild(el("span", "nom muted", "Total"));
+    ht.appendChild(el("div", "ro-m", fmtF(rev)));
+    lt.appendChild(ht);
+    cr.appendChild(lt);
+  }
+  ec.appendChild(cr);
+
+  /* --- répartition, dépensé et écarts, par groupe --- */
+  ec.appendChild(el("h2", null, "Répartition et dépenses"));
+  var rubs = c.rubriques.filter(function(r){
+    return (Number(r.montant) || 0) > 0 || cycDepenseRub(c, r.id) > 0;
+  });
+  if(!rubs.length){
+    var c1 = el("div", "card");
+    c1.appendChild(el("div", "vide-msg", "Rien n'a été réparti ni dépensé sur ce cycle."));
+    ec.appendChild(c1);
+  }else{
+    groupesPresents(rubs).forEach(function(g){
+      var membres = membresGroupe(rubs, g);
+      if(!membres.length) return;
+      var affG = 0, depG = 0;
+      membres.forEach(function(r){
+        affG += Number(r.montant) || 0;
+        depG += cycDepenseRub(c, r.id);
+      });
+      ec.appendChild(enteteGroupe(g, affG, depG, g === GROUPE_EPARGNE));
+
+      var carte = el("div", "card");
+      membres.slice().sort(function(a,b){ return (b.montant||0) - (a.montant||0); }).forEach(function(r){
+        var epR = (g === GROUPE_EPARGNE);
+        var aff = Number(r.montant) || 0;
+        var d = cycDepenseRub(c, r.id);
+        var e = aff - d;
+        var etat = etatDe(d, aff, epR);
+
+        var l = el("div", "ro");
+        var h = el("div", "ro-h");
+        var ic = el("span", "ico", r.icone);
+        ic.style.background = "rgba(255,255,255,.05)";
+        ic.style.boxShadow = "inset 0 0 0 1px " + r.couleur + "55";
+        h.appendChild(ic);
+        h.appendChild(el("span", "nom", r.nom));
+        var m = el("div", "ro-m", fmtF(d));
+        m.appendChild(el("small", null, (epR ? "objectif " : "sur ") + fmtF(aff)));
+        h.appendChild(m);
+        l.appendChild(h);
+        l.appendChild(jaugeRub(d, aff, epR));
+        var b2 = el("div", "ro-b");
+        b2.appendChild(el("span", classeEtat(etat),
+          aff > 0 ? pct(d / aff * 100) + (epR ? " de l'objectif" : " utilisé")
+                  : (d > 0 ? (epR ? "mis de côté" : "hors enveloppe") : "rien d'affecté")));
+        if(epR){
+          b2.appendChild(el("span", classeEtat(etat), motEpargne(d, aff)));
+        }else{
+          b2.appendChild(el("span", e < 0 ? "c-rouge" : "muted",
+            e >= 0 ? "Écart : + " + fmtF(e) : "Écart : − " + fmtF(-e)));
+        }
+        l.appendChild(b2);
+        carte.appendChild(l);
+      });
+      ec.appendChild(carte);
+    });
+
+    var nonAff = rev - rep;
+    if(nonAff > 0){
+      var cn = el("div", "card");
+      cn.style.marginTop = "10px";
+      var ln = el("div", "tb-ligne");
+      var pa = el("span", "pastille");
+      pa.style.background = "var(--muted)";
+      ln.appendChild(pa);
+      ln.appendChild(el("span", "ico", "\uD83D\uDDC2\uFE0F"));
+      ln.appendChild(el("span", "nom", "Non affecté"));
+      var mn = el("div", "tb-mont", fmtF(nonAff));
+      mn.appendChild(el("small", null, "jamais réparti"));
+      ln.appendChild(mn);
+      cn.appendChild(ln);
+      ec.appendChild(cn);
+    }
+  }
+
+  /* --- journal des dépenses du cycle --- */
+  var liste = triDepenses(c.depenses);
+  ec.appendChild(el("h2", null, liste.length
+    ? "Ses sorties (" + liste.length + ")" : "Ses sorties"));
+  var cd = el("div", "card");
+  if(!liste.length){
+    cd.appendChild(el("div", "vide-msg", "Aucune dépense n'a été saisie sur ce cycle."));
+  }else{
+    liste.forEach(function(d){
+      var r = null;
+      for(var i = 0; i < c.rubriques.length; i++){ if(c.rubriques[i].id === d.rubrique) r = c.rubriques[i]; }
+      var l = el("div", "ro");
+      var h = el("div", "ro-h");
+      var ic = el("span", "ico", r ? r.icone : "\uD83D\uDCB8");
+      if(r){
+        ic.style.background = "rgba(255,255,255,.05)";
+        ic.style.boxShadow = "inset 0 0 0 1px " + r.couleur + "55";
+      }
+      h.appendChild(ic);
+      var txt = el("div");
+      txt.style.flex = "1"; txt.style.minWidth = "0";
+      txt.appendChild(el("div", "d-lib", d.libelle || (r ? r.nom : "Dépense")));
+      var sous2 = dateCourte(d.date) + (r && d.libelle ? " · " + r.nom : "");
+      txt.appendChild(el("div", "d-date", sous2));
+      h.appendChild(txt);
+      h.appendChild(el("div", "ro-m", fmtF(d.montant)));
+      l.appendChild(h);
+      cd.appendChild(l);
+    });
+  }
+  ec.appendChild(cd);
+
+  var note = el("p", "tiny muted",
+    "Un cycle archivé ne se modifie plus : c'est la photo de votre mois, telle qu'elle était à la clôture.");
+  note.style.margin = "12px 0 0";
+  ec.appendChild(note);
+}
+
+/* ==============================================================
+   SPRINT 4 — FEUILLE PLEIN ÉCRAN GÉNÉRIQUE
+   (même mécanique que la saisie de dépense : bouton retour du
+   téléphone et touche Échap referment la feuille)
+   ============================================================== */
+function creerFeuille(titreTxt){
+  if(feuille) fermerFeuille(false);
+  var sh = el("div", "sheet");
+  sh.setAttribute("role", "dialog");
+  sh.setAttribute("aria-modal", "true");
+
+  var top = el("div", "sheet-top");
+  var topIn = el("div", "sheet-top-in");
+  var t = el("div", "sheet-titre", titreTxt);
+  var bF = el("button", "icon-btn", "×");
+  bF.type = "button"; bF.setAttribute("aria-label", "Fermer");
+  bF.addEventListener("click", function(){ fermerFeuille(false); });
+  topIn.appendChild(t); topIn.appendChild(bF);
+  top.appendChild(topIn); sh.appendChild(top);
+
+  var body = el("div", "sheet-body");
+  sh.appendChild(body);
+
+  document.body.appendChild(sh);
+  document.body.style.overflow = "hidden";
+  feuille = sh;
+  try{ history.pushState({mdFeuille:1}, ""); }catch(e){}
+  return {sh: sh, body: body, titre: t};
+}
+
+/* ==============================================================
+   SPRINT 4 — CODE D'ACCÈS (F8)
+   Le code décourage les curieux ; il ne chiffre pas les données.
+   C'est écrit noir sur blanc dans les Réglages.
+   ============================================================== */
+
+/* Pavé numérique + quatre points. opts.onComplet(code, api) */
+function blocCode(opts){
+  var wrap = el("div", "code-bloc");
+  var pts = el("div", "points");
+  var points = [];
+  for(var i = 0; i < 4; i++){
+    var d = el("div", "pt");
+    pts.appendChild(d); points.push(d);
+  }
+  wrap.appendChild(pts);
+  var err = el("div", "err-code", "");
+  wrap.appendChild(err);
+
+  var saisie = "";
+  function majPoints(){
+    points.forEach(function(d, i){ d.classList.toggle("on", i < saisie.length); });
+  }
+  var api = {
+    reset: function(){ saisie = ""; err.textContent = ""; majPoints(); },
+    erreur: function(m){ saisie = ""; err.textContent = m; majPoints(); }
+  };
+  function taper(c){
+    if(saisie.length >= 4) return;
+    err.textContent = "";
+    saisie += c;
+    majPoints();
+    if(saisie.length === 4){
+      var code = saisie;
+      setTimeout(function(){ opts.onComplet(code, api); }, 130);
+    }
+  }
+  var clav = el("div", "clav");
+  ["1","2","3","4","5","6","7","8","9"].forEach(function(c){
+    var b = el("button", "tou", c);
+    b.type = "button";
+    b.addEventListener("click", function(){ taper(c); });
+    clav.appendChild(b);
+  });
+  var vide = el("button", "tou tou-vide", "");
+  vide.type = "button"; vide.tabIndex = -1; vide.setAttribute("aria-hidden", "true");
+  clav.appendChild(vide);
+  var b0 = el("button", "tou", "0");
+  b0.type = "button";
+  b0.addEventListener("click", function(){ taper("0"); });
+  clav.appendChild(b0);
+  var bDel = el("button", "tou", "⌫");
+  bDel.type = "button"; bDel.setAttribute("aria-label", "Effacer le dernier chiffre");
+  bDel.addEventListener("click", function(){
+    saisie = saisie.slice(0, -1);
+    err.textContent = "";
+    majPoints();
+  });
+  clav.appendChild(bDel);
+  wrap.appendChild(clav);
+
+  wrap.api = api;
+  return wrap;
+}
+
+/* Écran d'ouverture verrouillé : rien d'autre n'est dessiné */
+function vueVerrou(ec, ba){
+  var w = el("div", "verrou");
+  w.appendChild(el("h1", null, "Bonjour"));
+  w.appendChild(el("p", "sub", "Entrez votre code à 4 chiffres pour ouvrir MonDjai."));
+  w.appendChild(blocCode({
+    onComplet: function(code, api){
+      if(code === S.pin){
+        deverrouille = true;
+        render();
+      }else{
+        api.erreur("Ce code ne correspond pas. Réessayez tranquillement.");
+      }
+    }
+  }));
+  var oub = el("button", "lien", "J'ai oublié mon code");
+  oub.type = "button";
+  oub.addEventListener("click", oubliCode);
+  w.appendChild(oub);
+  ec.appendChild(w);
+}
+
+/* Code oublié : on le dit franchement, il n'y a pas de porte dérobée */
+function oubliCode(){
+  var m1 = "Votre code n'est écrit nulle part ailleurs que sur ce téléphone : personne ne peut vous le rappeler.\n\n"
+         + "La seule voie est d'effacer les données de cet appareil, puis de repartir de votre dernier fichier de sauvegarde.\n\n"
+         + "Voulez-vous continuer ?";
+  if(!confirm(m1)) return;
+  var m2 = "Effacer maintenant les données MonDjai de cet appareil ?\n\n"
+         + "C'est définitif. Juste après, vous pourrez restaurer votre fichier « mondjai-sauvegarde-….json ».";
+  if(!confirm(m2)) return;
+  try{ localStorage.removeItem(CLE); }catch(e){}
+  S = neuf();
+  deverrouille = true;
+  rubOuverte = null; cycleOuvert = null; brouillonCycle = null; retours = {};
+  vue = "revenus";
+  sauver();
+  render();
+  toast("Appareil remis à zéro");
+}
+
+/* Activer ou modifier le code : saisie, puis confirmation */
+function ouvrirDefinirCode(){
+  var f = creerFeuille(S.pin ? "Modifier le code" : "Activer le code");
+  var titre = el("h1", null, "Choisissez un code");
+  var sous = el("p", "sub", "Quatre chiffres, faciles à retenir pour vous.");
+  f.body.appendChild(titre);
+  f.body.appendChild(sous);
+  var zone = el("div");
+  f.body.appendChild(zone);
+
+  var premier = "";
+  function dessiner(msg){
+    zone.innerHTML = "";
+    titre.textContent = premier ? "Confirmez le code" : "Choisissez un code";
+    sous.textContent = premier ? "Saisissez-le une seconde fois."
+                               : "Quatre chiffres, faciles à retenir pour vous.";
+    var bloc = blocCode({
+      onComplet: function(code){
+        if(!premier){
+          premier = code;
+          dessiner("");
+        }else if(code === premier){
+          S.pin = code;
+          deverrouille = true;
+          sauver();
+          fermerFeuille(false);
+          render();
+          toast("Code activé ✓");
+        }else{
+          premier = "";
+          dessiner("Les deux codes sont différents. On recommence.");
+        }
+      }
+    });
+    zone.appendChild(bloc);
+    if(msg) bloc.api.erreur(msg);
+  }
+  dessiner("");
+}
+
+function desactiverCode(){
+  if(!confirm("Désactiver le code d'accès ?\n\nMonDjai s'ouvrira alors directement, sans rien demander.")) return;
+  S.pin = null;
+  deverrouille = true;
+  sauver();
+  render();
+  toast("Code désactivé");
+}
+
+/* ==============================================================
+   SPRINT 4 — ASSISTANT DE LISSAGE : le panneau dépliable (F9)
+   ============================================================== */
+function blocLissage(r, onAppliquer, onMaj){
+  var p = el("div", "lissage");
+  p.hidden = true;
+  p.appendChild(el("div", "liss-t", "Lisser cette dépense"));
+  p.appendChild(el("p", "liss-p",
+    "Indiquez ce que vous payez réellement et à quelle fréquence : MonDjai calcule la part à prévoir chaque mois."));
+
+  var ligne = el("div", "liss-ligne");
+  ligne.appendChild(el("span", "liss-lab", "Montant réel"));
+  var champ = champMontant(Number(r.montantReel) || 0, function(v){
+    r.montantReel = v; sauver(); majResultat();
+  });
+  ligne.appendChild(champ);
+  p.appendChild(ligne);
+
+  var chips = el("div", "chips");
+  chips.style.margin = "11px 0 12px";
+  PERIODICITES.forEach(function(pe){
+    var c = el("button", "chip", pe.label);
+    c.type = "button";
+    c.setAttribute("aria-pressed", (r.periodicite || "mensuel") === pe.cle ? "true" : "false");
+    c.addEventListener("click", function(){
+      r.periodicite = pe.cle; sauver();
+      chips.querySelectorAll(".chip").forEach(function(x){ x.setAttribute("aria-pressed", "false"); });
+      c.setAttribute("aria-pressed", "true");
+      majResultat();
+    });
+    chips.appendChild(c);
+  });
+  p.appendChild(chips);
+
+  var res = el("div", "liss-res", "");
+  p.appendChild(res);
+
+  var row = el("div", "row-btns");
+  var bRet = el("button", "btn btn-ghost", "Retirer");
+  bRet.type = "button";
+  bRet.addEventListener("click", function(){
+    r.montantReel = 0; r.periodicite = "mensuel"; sauver();
+    champ.value = fmt(0); champ.classList.add("vide");
+    chips.querySelectorAll(".chip").forEach(function(x, i){
+      x.setAttribute("aria-pressed", i === 0 ? "true" : "false");
+    });
+    majResultat();
+    if(onMaj) onMaj();
+  });
+  var bApp = el("button", "btn btn-primary", "Appliquer");
+  bApp.type = "button";
+  bApp.addEventListener("click", function(){
+    var prov = provisionRub(r);
+    if(prov <= 0) return;
+    onAppliquer(prov);
+    if(onMaj) onMaj();
+    p.hidden = true;
+    toast("Provision mensuelle appliquée ✓");
+  });
+  row.appendChild(bRet); row.appendChild(bApp);
+  p.appendChild(row);
+
+  function majResultat(){
+    var prov = provisionRub(r);
+    var pe = periodDe(r.periodicite);
+    res.textContent = prov > 0
+      ? "Provision mensuelle : " + fmtF(prov) + "  (" + fmtF(Number(r.montantReel) || 0) + " " + pe.par + ")"
+      : "Saisissez le montant réel pour voir la part mensuelle.";
+    bApp.disabled = !(prov > 0);
+    bApp.textContent = prov > 0 ? "Mettre " + fmtF(prov) : "Appliquer";
+  }
+  majResultat();
+  return p;
+}
+
+/* Ligne de répartition complète : rubrique + lien de lissage + panneau.
+   Utilisée par l'écran Répartition et par l'écran Nouveau cycle. */
+function ligneRepartition(r, valeur, onChange, onMaj, pcts){
+  var frag = document.createDocumentFragment();
+
+  var row = el("div", "repart");
+  row.style.borderLeftColor = r.couleur;
+  var ic = el("span", "ico", r.icone);
+  ic.style.background = "rgba(255,255,255,.05)";
+  ic.style.boxShadow = "inset 0 0 0 1px " + r.couleur + "55";
+  row.appendChild(ic);
+
+  var bloc = el("div");
+  bloc.style.flex = "1"; bloc.style.minWidth = "0";
+  bloc.appendChild(el("div", "nom", r.nom));
+  var sousLigne = el("div", "sous-ligne");
+  var pc = el("span", "pct", "0 %");
+  if(pcts) pcts[r.id] = pc;
+  sousLigne.appendChild(pc);
+  var lien = el("button", "lien-liss", "");
+  lien.type = "button";
+  sousLigne.appendChild(lien);
+  bloc.appendChild(sousLigne);
+  row.appendChild(bloc);
+
+  var bReste = el("button", "reste-ici", "+ reste");
+  bReste.type = "button";
+  bReste.title = "Mettre tout le reste dans cette rubrique";
+  row.appendChild(bReste);
+
+  var champ = champMontant(valeur, function(v){ onChange(v); });
+  row.appendChild(champ);
+
+  function poser(v){
+    onChange(v);
+    champ.value = fmt(v);
+    champ.classList.toggle("vide", v === 0);
+  }
+  bReste.addEventListener("click", function(){
+    var rst = onMaj.reste();
+    if(rst <= 0) return;
+    poser((chiffres(champ.value) || 0) + rst);
+    onMaj.maj();
+  });
+
+  var panneau = blocLissage(r, function(prov){
+    poser(prov);
+    onMaj.maj();
+  }, majLien);
+  function majLien(){
+    var t = rappelLissage(r);
+    lien.textContent = t ? "≈ " + t : "Lisser un montant";
+  }
+  lien.addEventListener("click", function(){ panneau.hidden = !panneau.hidden; });
+  majLien();
+
+  frag.appendChild(row);
+  frag.appendChild(panneau);
+  return frag;
+}
+
+/* ==============================================================
+   SPRINT 4 — MODIFIER UNE RUBRIQUE (nom, icône, couleur, groupe)
+   ============================================================== */
+function ouvrirEditionRubrique(r, apres){
+  var f = creerFeuille("Modifier la rubrique");
+  f.body.appendChild(el("h1", null, r.icone + " " + r.nom));
+  f.body.appendChild(el("p", "sub", "Renommez-la, changez son icône, sa couleur ou son groupe. Ses dépenses ne bougent pas."));
+
+  /* nom */
+  var fNom = el("div", "field");
+  fNom.appendChild(el("label", null, "Nom"));
+  var iNom = document.createElement("input");
+  iNom.type = "text"; iNom.className = "input"; iNom.maxLength = 40; iNom.value = r.nom;
+  fNom.appendChild(iNom); f.body.appendChild(fNom);
+
+  /* icône */
+  var choixEmoji = r.icone;
+  var fEm = el("div", "field");
+  fEm.appendChild(el("label", null, "Icône"));
+  var wEm = el("div", "emojis");
+  var listeEm = EMOJIS.slice();
+  if(listeEm.indexOf(r.icone) < 0) listeEm.unshift(r.icone);
+  listeEm.forEach(function(e){
+    var b = el("button", "em", e);
+    b.type = "button";
+    b.setAttribute("aria-pressed", e === r.icone ? "true" : "false");
+    b.setAttribute("aria-label", "Icône " + e);
+    b.addEventListener("click", function(){
+      choixEmoji = e;
+      wEm.querySelectorAll(".em").forEach(function(x){ x.setAttribute("aria-pressed", "false"); });
+      b.setAttribute("aria-pressed", "true");
+    });
+    wEm.appendChild(b);
+  });
+  fEm.appendChild(wEm); f.body.appendChild(fEm);
+
+  /* couleur */
+  var choixCoul = r.couleur;
+  var fC = el("div", "field");
+  fC.appendChild(el("label", null, "Couleur"));
+  var wC = el("div", "swatches");
+  var listeC = COULEURS.slice();
+  if(listeC.indexOf(r.couleur) < 0) listeC.unshift(r.couleur);
+  listeC.forEach(function(c, i){
+    var b = el("button", "sw");
+    b.type = "button"; b.style.background = c;
+    b.setAttribute("aria-pressed", c === r.couleur ? "true" : "false");
+    b.setAttribute("aria-label", "Couleur " + (i + 1));
+    b.addEventListener("click", function(){
+      choixCoul = c;
+      wC.querySelectorAll(".sw").forEach(function(x){ x.setAttribute("aria-pressed", "false"); });
+      b.setAttribute("aria-pressed", "true");
+    });
+    wC.appendChild(b);
+  });
+  fC.appendChild(wC); f.body.appendChild(fC);
+
+  /* groupe */
+  var fG = el("div", "field");
+  fG.appendChild(el("label", null, "Groupe"));
+  var sG = document.createElement("select");
+  sG.className = "input";
+  var gs = GROUPES.slice();
+  if(gs.indexOf(r.groupe) < 0) gs.push(r.groupe);
+  gs.forEach(function(g){
+    var o = document.createElement("option");
+    o.value = g; o.textContent = g;
+    if(g === r.groupe) o.selected = true;
+    sG.appendChild(o);
+  });
+  fG.appendChild(sG);
+  var aideG = el("p", "tiny muted", "");
+  aideG.style.margin = "6px 0 0";
+  fG.appendChild(aideG);
+  function majAideG(){
+    aideG.textContent = sG.value === GROUPE_EPARGNE
+      ? "Dans ce groupe, MonDjai vous encourage au lieu de vous alerter : y mettre de l'argent est une réussite."
+      : "Le groupe décide de la place de la rubrique sur le tableau de bord et de son sous-total.";
+  }
+  sG.addEventListener("change", majAideG);
+  majAideG();
+  f.body.appendChild(fG);
+
+  var err = el("p", "tiny", "");
+  err.style.color = "var(--red)"; err.style.margin = "0";
+  f.body.appendChild(err);
+
+  /* barre */
+  var bar = el("div", "sticky"), inn = el("div", "sticky-in");
+  var bOk = el("button", "btn btn-primary", "Enregistrer");
+  bOk.type = "button";
+  bOk.addEventListener("click", function(){
+    var nom = iNom.value.trim();
+    if(!nom){ err.textContent = "Donnez un nom à la rubrique."; iNom.focus(); return; }
+    var doublon = S.rubriques.some(function(x){
+      return x.id !== r.id && x.nom.toLowerCase() === nom.toLowerCase();
+    });
+    if(doublon){ err.textContent = "Une autre rubrique porte déjà ce nom."; return; }
+    r.nom = nom; r.icone = choixEmoji; r.couleur = choixCoul; r.groupe = sG.value;
+    sauver();
+    fermerFeuille(false);
+    if(apres) apres();
+    toast("Rubrique mise à jour ✓");
+  });
+  inn.appendChild(bOk);
+  bar.appendChild(inn);
+  f.sh.appendChild(bar);
+}
+
+/* ==============================================================
+   SPRINT 4 — ÉCRAN RÉGLAGES (F8)
+   Tout ce qui n'est pas le geste quotidien vit ici.
+   ============================================================== */
+function ligneReglage(titre, sous, onClic){
+  var b = el("button", "regl");
+  b.type = "button";
+  var t = el("div");
+  t.style.flex = "1"; t.style.minWidth = "0";
+  t.appendChild(el("div", "regl-nom", titre));
+  if(sous) t.appendChild(el("div", "regl-sous", sous));
+  b.appendChild(t);
+  b.appendChild(el("span", "chev", "›"));
+  b.addEventListener("click", onClic);
+  return b;
+}
+
+function vueReglages(ec, ba){
+  ec.appendChild(el("h1", null, "Réglages"));
+  ec.appendChild(el("p", "sub", "Tout se règle ici. L'accueil, lui, reste léger pour le quotidien."));
+
+  /* --- ce cycle --- */
+  ec.appendChild(el("h2", null, "Ce cycle"));
+  ec.appendChild(ligneReglage("Revenus et jour de paie",
+    "Total " + fmtF(totalRevenus()) + " · reçu " + libelleJour(),
+    function(){ ouvrirVue("revenus", "reglages"); }));
+  ec.appendChild(ligneReglage("Répartition en enveloppes",
+    "Réparti " + fmtF(totalReparti()) + " sur " + fmtF(totalRevenus()),
+    function(){ ouvrirVue("repartition", "reglages"); }));
+
+  /* --- rubriques et groupes --- */
+  ec.appendChild(el("h2", null, "Rubriques et groupes"));
+  var nAct = actives().length;
+  ec.appendChild(ligneReglage("Mes rubriques",
+    nAct + (nAct > 1 ? " rubriques actives" : " rubrique active") + " · renommer, icône, couleur, groupe",
+    function(){ ouvrirVue("rubriques", "reglages"); }));
+
+  /* --- code d'accès --- */
+  ec.appendChild(el("h2", null, "Code d'accès"));
+  var cc = el("div", "card");
+  var etatL = el("div");
+  etatL.style.display = "flex"; etatL.style.justifyContent = "space-between"; etatL.style.alignItems = "baseline";
+  etatL.appendChild(el("span", null, "Code à 4 chiffres"));
+  etatL.appendChild(el("span", S.pin ? "c-vert" : "muted", S.pin ? "Activé" : "Désactivé"));
+  cc.appendChild(etatL);
+  var rowC = el("div", "row-btns");
+  rowC.style.marginTop = "12px";
+  var bDef = el("button", "btn" + (S.pin ? "" : " btn-primary"), S.pin ? "Modifier le code" : "Activer le code");
+  bDef.type = "button";
+  bDef.addEventListener("click", ouvrirDefinirCode);
+  rowC.appendChild(bDef);
+  if(S.pin){
+    var bOff = el("button", "btn btn-ghost", "Désactiver");
+    bOff.type = "button";
+    bOff.addEventListener("click", desactiverCode);
+    rowC.appendChild(bOff);
+  }
+  cc.appendChild(rowC);
+  ec.appendChild(cc);
+  var noteC = el("p", "tiny muted",
+    "À dire franchement : ce code décourage les curieux qui prennent votre téléphone, mais il ne chiffre pas vos données. "
+    + "Quelqu'un qui s'y connaît pourrait les lire autrement. Et s'il est oublié, il n'y a pas de porte de secours : "
+    + "il faut effacer les données de l'appareil et repartir de la dernière sauvegarde.");
+  noteC.style.margin = "8px 0 0";
+  ec.appendChild(noteC);
+
+  /* --- sauvegarde --- */
+  ec.appendChild(el("h2", null, "Sauvegarde et restauration"));
+  ec.appendChild(blocSauvegarde());
+  var noteS = el("p", "tiny muted", (S.derniereSauvegarde
+    ? "Dernière sauvegarde : " + dateComplete(S.derniereSauvegarde) + ". "
+    : "Aucune sauvegarde pour l'instant. ")
+    + "Le fichier reste sur votre téléphone : gardez-en une copie quelque part de sûr.");
+  noteS.style.margin = "10px 0 0";
+  ec.appendChild(noteS);
+
+  /* --- historique et à propos --- */
+  ec.appendChild(el("h2", null, "Plus loin"));
+  var n = S.cycles.length;
+  ec.appendChild(ligneReglage("Historique des cycles",
+    n ? (n + (n > 1 ? " cycles archivés" : " cycle archivé")) : "Aucun cycle archivé pour l'instant",
+    function(){ ouvrirVue("historique", "reglages"); }));
+  ec.appendChild(ligneReglage("À propos de MonDjai",
+    "Ce que l'application fait, et ce qu'elle ne fait pas",
+    function(){ ouvrirVue("apropos", "reglages"); }));
+
+  /* --- repartir de zéro --- */
+  ec.appendChild(el("h2", null, "Repartir de zéro"));
+  var bRaz = el("button", "btn btn-danger", "Réinitialiser MonDjai");
+  bRaz.type = "button";
+  bRaz.addEventListener("click", function(){
+    if(confirm("Effacer toutes vos données MonDjai sur cet appareil — cycle en cours et cycles archivés ?\n\nC'est définitif. Pensez à sauvegarder d'abord si vous voulez pouvoir revenir en arrière.")){
+      try{ localStorage.removeItem(CLE); }catch(e){}
+      S = neuf();
+      deverrouille = true;
+      rubOuverte = null; cycleOuvert = null; brouillonCycle = null; retours = {};
+      vue = "revenus";
+      sauver();
+      render();
+    }
+  });
+  ec.appendChild(bRaz);
+  var noteR = el("p", "tiny muted", "Vos données restent sur cet appareil, et nulle part ailleurs.");
+  noteR.style.margin = "12px 0 0";
+  ec.appendChild(noteR);
+}
+
+/* ==============================================================
+   SPRINT 4 — ÉCRAN À PROPOS
+   ============================================================== */
+function vueApropos(ec, ba){
+  ec.appendChild(boutonRetour("Réglages", "reglages"));
+  ec.appendChild(el("h1", null, "À propos"));
+
+  var mission = el("div", "card");
+  mission.appendChild(el("p", "mission",
+    "MonDjai met sur le téléphone un geste que vous faites déjà : partager le salaire en enveloppes, le jour de la paie."));
+  mission.appendChild(el("p", "small muted",
+    "Trente secondes par jour, pas plus. L'application informe et éclaire ; elle ne juge jamais et ne bloque jamais."));
+  ec.appendChild(mission);
+
+  ec.appendChild(el("h2", null, "Ce que MonDjai fait"));
+  var c1 = el("div", "card");
+  [
+    "Cale votre budget sur votre jour de paie, pas sur le 1er du mois.",
+    "Partage vos revenus en enveloppes, y compris les activités secondaires.",
+    "Enregistre une dépense en trois taps, sans photo ni formulaire.",
+    "Montre où vous en êtes, enveloppe par enveloppe et groupe par groupe.",
+    "Lisse les dépenses qui ne tombent pas tous les mois.",
+    "Archive chaque cycle pour que vous puissiez vous relire.",
+    "Fonctionne entièrement hors ligne, une fois installée."
+  ].forEach(function(t){
+    var l = el("div", "ap");
+    l.appendChild(el("span", null, "•"));
+    l.appendChild(el("span", null, t));
+    c1.appendChild(l);
+  });
+  ec.appendChild(c1);
+
+  ec.appendChild(el("h2", null, "Ce que MonDjai ne fait pas"));
+  var c2 = el("div", "card");
+  [
+    "Ne se connecte à aucune banque et ne lit aucun SMS.",
+    "N'envoie rien sur Internet : aucun compte, aucun nuage, aucune publicité.",
+    "Ne vous bloque jamais et ne vous fait pas la morale.",
+    "Ne suit pas vos comptes : elle suit votre budget.",
+    "Ne coûte rien, et ne coûtera rien."
+  ].forEach(function(t){
+    var l = el("div", "ap");
+    l.appendChild(el("span", null, "•"));
+    l.appendChild(el("span", null, t));
+    c2.appendChild(l);
+  });
+  ec.appendChild(c2);
+
+  ec.appendChild(el("h2", null, "Vos données"));
+  var c3 = el("div", "card");
+  c3.appendChild(el("p", "small",
+    "Tout ce que vous saisissez reste dans la mémoire de ce téléphone. Vos données ne quittent jamais l'appareil : aucun serveur, aucun compte, personne d'autre que vous ne les voit."));
+  c3.appendChild(el("p", "small muted",
+    "Revers de la médaille : si vous effacez les données du navigateur ou changez de téléphone, elles s'en vont avec. Le fichier de sauvegarde est votre seule copie — prenez l'habitude de le faire à chaque paie."));
+  ec.appendChild(c3);
+
+  var v = el("p", "tiny muted", "MonDjai — version 5B (Sprints 1 à 5B, logique) · FCFA · français · hors ligne.");
+  v.style.margin = "16px 0 0";
+  ec.appendChild(v);
+  var d = el("p", "tiny muted", "« Lève-toi et avance. »");
+  d.style.margin = "4px 0 0";
+  ec.appendChild(d);
+}
+
+/* Sprint 5A — quand le clavier s'ouvre, les barres fixes (validation,
+   navigation) remontent au-dessus de lui au lieu de rester cachées dessous. */
+if(window.visualViewport){
+  (function(){
+    var vv = window.visualViewport;
+    function ajuster(){
+      var decalage = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      document.documentElement.style.setProperty("--clavier", decalage + "px");
+    }
+    vv.addEventListener("resize", ajuster);
+    vv.addEventListener("scroll", ajuster);
+    ajuster();
+  })();
+}
+
+/* ---------- démarrage ----------
+   On réécrit tout de suite l'état migré : même si l'utilisateur
+   ne touche à rien, ses données anciennes sont déjà au format
+   des cycles, sans qu'il ait rien vu ni rien perdu. */
+sauver();
+render();
+
+if("serviceWorker" in navigator){
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("./sw.js").catch(function(){});
+  });
+}
+</script>
+</body>
+</html>
