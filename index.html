@@ -515,15 +515,96 @@
     display:flex;
     flex-direction:column;
     align-items:center;
-    gap:3px;
-    font-size:11px;
+    gap:2px;
+    font-size:10.5px;
     font-weight:700;
-    padding:6px 4px;
+    padding:6px 2px;
     cursor:pointer;
     border-radius:12px;
   }
-  .tabbar-btn .tabbar-ic{font-size:20px;}
+  .tabbar-btn .tabbar-ic{font-size:19px;}
   .tabbar-btn.active{color:var(--accent);}
+
+  /* ---------- En-tête avec accès réglages ---------- */
+  .home-header-row{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .icon-btn{
+    width:40px;height:40px;
+    border-radius:50%;
+    background:var(--card);
+    border:1px solid var(--border);
+    color:var(--text-dim);
+    font-size:18px;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+
+  /* ---------- Objectif : jauge de progression ---------- */
+  .gauge-track{
+    width:100%;
+    height:12px;
+    border-radius:999px;
+    background:var(--card-2);
+    overflow:hidden;
+    margin-top:12px;
+  }
+  .gauge-fill{
+    height:100%;
+    border-radius:999px;
+    background:linear-gradient(90deg, var(--accent-dark), var(--accent));
+    transition:width .25s ease;
+  }
+  .objectif-card{
+    margin:14px 20px 0;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:16px 18px;
+    cursor:pointer;
+  }
+  .objectif-card-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    font-size:14px;
+    font-weight:800;
+  }
+  .objectif-card-head span:last-child{color:var(--accent);}
+  .objectif-card-sub{
+    margin-top:8px;
+    font-size:13px;
+    color:var(--text-dim);
+    font-weight:600;
+  }
+  .objectif-prompt{
+    margin:14px 20px 0;
+    border:2px dashed var(--border);
+    border-radius:var(--radius);
+    padding:16px 18px;
+    color:var(--text-dim);
+    font-weight:700;
+    font-size:14px;
+    text-align:center;
+    cursor:pointer;
+  }
+  .scenario-card{
+    display:flex;
+    flex-direction:row;
+    align-items:center;
+    justify-content:space-between;
+    text-align:left;
+    padding:16px;
+    gap:10px;
+    width:100%;
+  }
+  .scenario-card .sc-name{font-weight:800; font-size:15px;}
+  .scenario-card .sc-sub{font-size:12px; color:var(--text-dim); font-weight:400; margin-top:2px;}
+  .scenario-card .sc-duree{font-weight:800; color:var(--accent); white-space:nowrap; text-align:right; margin-left:auto; padding-left:10px;}
 
   /* ---------- Mon état ---------- */
   .seg-toggle{
@@ -671,6 +752,87 @@
     text-align:center;
   }
   .confirm-box p{color:var(--text-dim); font-size:14px; line-height:1.5;}
+
+  /* ---------- Écran Réglages / À propos (Sprint 4) ---------- */
+  .back-header{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-bottom:18px;
+  }
+  .back-header .onb-title{flex:1;}
+  .settings-section{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:16px;
+    margin-bottom:16px;
+  }
+  .settings-section-title{
+    font-size:12px;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    color:var(--text-dim);
+    margin-bottom:12px;
+  }
+
+  /* ---------- Code PIN (Sprint 4) ---------- */
+  .pin-dots{
+    display:flex;
+    justify-content:center;
+    gap:16px;
+    margin:22px 0 28px;
+  }
+  .pin-dot{
+    width:16px;height:16px;
+    border-radius:50%;
+    border:2px solid var(--border);
+    background:transparent;
+  }
+  .pin-dot.filled{
+    background:var(--accent);
+    border-color:var(--accent);
+  }
+  .pin-keypad{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:16px;
+    max-width:270px;
+    margin:0 auto;
+  }
+  .pin-key{
+    aspect-ratio:1;
+    border-radius:50%;
+    background:var(--card);
+    border:1px solid var(--border);
+    color:var(--text);
+    font-size:22px;
+    font-weight:700;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+  }
+  .pin-key.empty{background:transparent; border:none; cursor:default;}
+
+  /* ---------- Écran Partager (Sprint 4) ---------- */
+  .share-preview-wrap{
+    margin:16px 20px 0;
+    border-radius:var(--radius);
+    overflow:hidden;
+    border:1px solid var(--border);
+    background:var(--card-2);
+  }
+  .share-preview-wrap canvas{
+    display:block;
+    width:100%;
+    height:auto;
+  }
+  .share-actions{
+    margin:16px 20px 0;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
 </style>
 </head>
 <body>
@@ -714,10 +876,25 @@
 
   var MAX_RUBRIQUES_CONSEILLE = 10;
 
+  // Dimensions de l'image générée par l'écran "Partager" (F8).
+  var SHARE_W = 1080;
+  var SHARE_H = 1350;
+
+  var MODELES_OBJECTIF = [
+    { id:"vehicule", nom:"Véhicule",         emoji:"🏍️", desc:"Moto, apport véhicule",       sousTypes:["Moto","Apport véhicule"] },
+    { id:"famille",  nom:"Famille",          emoji:"👨‍👩‍👧", desc:"Mariage, scolarité, santé",  sousTypes:["Mariage","Scolarité","Santé"] },
+    { id:"filet",    nom:"Filet de sécurité",emoji:"🛟", desc:"Jour sans travail, panne, contrôle", sousTypes:["Jour sans travail","Panne","Contrôle"] }
+  ];
+
+  var POURCENTAGES_SCENARIO = [10,20,30];
+  var NOMS_SCENARIO = { 10:"Tranquille", 20:"Équilibré", 30:"Ambitieux" };
+  var NB_SEMAINES_MOYENNE = 4;
+  var RAPPEL_SAUVEGARDE_JOURS = 7;
+
   /* ---------- État ---------- */
 
   var state = null;
-  var ui = { screen:"loading", modal:null, modalData:{}, tab:"aujourdhui", etatPeriode:"semaine" };
+  var ui = { screen:"loading", modal:null, modalData:{}, tab:"aujourdhui", etatPeriode:"semaine", objStep:1, objData:{}, objEditing:false, overlay:null, locked:false, lockPin:"", partagerPeriode:"jour" };
 
   function dateToKey(d){
     var y = d.getFullYear();
@@ -738,10 +915,17 @@
         statutVehicule:null,      // 'proprietaire' | 'locataire'
         dioulatchai:0,
         rubriques:[],             // {id, nom, icone, couleur, actif, perso}
-        onboardingComplete:false
+        onboardingComplete:false,
+        pinActif:false,           // verrouillage par code PIN (F10)
+        pinCode:null              // code à 4 chiffres, ou null
       },
       jours:{},                   // { 'AAAA-MM-JJ': {date, origine:'trepor', recette, charges:[]} }
-      dernierMontant:{}           // { rubriqueId: montant }
+      dernierMontant:{},          // { rubriqueId: montant }
+      objectif:null,              // { id, modele, sousType, nom, montantCible, dateCreation, pourcentage, actif }
+      meta:{                      // suivi interne (sauvegarde), invisible dans l'UI hormis le rappel
+        derniereSauvegarde:null,
+        dernierRappelSauvegarde:null
+      }
     };
   }
 
@@ -756,10 +940,25 @@
       parsed.config = Object.assign(base.config, parsed.config);
       parsed.jours = parsed.jours || {};
       parsed.dernierMontant = parsed.dernierMontant || {};
+      if(parsed.objectif === undefined) parsed.objectif = null;
+      parsed.meta = Object.assign({}, base.meta, parsed.meta || {});
       return parsed;
     }catch(e){
       return defaultState();
     }
+  }
+
+  // Fusionne un objet restauré (sauvegarde JSON) dans une structure d'état complète et sûre.
+  function normaliserEtatImporte(parsed){
+    var base = defaultState();
+    var out = {};
+    out.version = parsed.version || 1;
+    out.config = Object.assign({}, base.config, parsed.config || {});
+    out.jours = parsed.jours || {};
+    out.dernierMontant = parsed.dernierMontant || {};
+    out.objectif = parsed.objectif !== undefined ? parsed.objectif : null;
+    out.meta = Object.assign({}, base.meta, parsed.meta || {});
+    return out;
   }
 
   function saveState(){
@@ -879,6 +1078,81 @@
     return (prefix||"id") + "_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2,7);
   }
 
+  function joursEntre(keyDebut, keyFin){
+    var d1 = new Date(keyDebut + "T00:00:00");
+    var d2 = new Date(keyFin + "T00:00:00");
+    return Math.round((d2 - d1) / 86400000);
+  }
+
+  function soldeNetJour(j){
+    var totalCh = (j.charges||[]).reduce(function(s,c){ return s + c.montant; }, 0);
+    return (j.recette || 0) - totalCh;
+  }
+
+  function jourADesDonnees(j){
+    return j.recette !== null || (j.charges && j.charges.length > 0);
+  }
+
+  // Solde net moyen réel par semaine, calculé sur les dernières semaines
+  // réellement saisies (pas des semaines calendaires vides). Sert de base
+  // au simulateur "3 façons d'y arriver" (F7).
+  function computeMoyenneHebdoRecente(){
+    var semaines = {}; // clé = lundi de la semaine (AAAA-MM-JJ)
+    Object.keys(state.jours).forEach(function(k){
+      var j = state.jours[k];
+      if(!jourADesDonnees(j)) return;
+      var d = new Date(k + "T00:00:00");
+      var range = getWeekRange(d);
+      if(!semaines[range.start]) semaines[range.start] = { start:range.start, soldeNet:0, nbJours:0 };
+      semaines[range.start].soldeNet += soldeNetJour(j);
+      semaines[range.start].nbJours += 1;
+    });
+    var liste = Object.keys(semaines).map(function(k){ return semaines[k]; });
+    liste.sort(function(a,b){ return a.start < b.start ? 1 : -1; }); // plus récent d'abord
+    var recentes = liste.slice(0, NB_SEMAINES_MOYENNE);
+    var total = recentes.reduce(function(s,sem){ return s + sem.soldeNet; }, 0);
+    var moyenne = recentes.length > 0 ? total / recentes.length : 0;
+    return { moyenne:moyenne, nbSemaines:recentes.length };
+  }
+
+  // Calcule les 3 scénarios d'épargne hebdomadaire pour atteindre montantCible.
+  function computeScenarios(montantCible){
+    var info = computeMoyenneHebdoRecente();
+    return POURCENTAGES_SCENARIO.map(function(pct){
+      var epargneHebdo = info.moyenne > 0 ? (info.moyenne * pct / 100) : 0;
+      var semaines = epargneHebdo > 0 ? Math.ceil(montantCible / epargneHebdo) : null;
+      return { pourcentage:pct, epargneHebdo:epargneHebdo, semaines:semaines };
+    });
+  }
+
+  function formatDureeSemaines(sem){
+    if(sem === null || sem === undefined || !isFinite(sem)) return "À déterminer";
+    if(sem <= 8) return sem + (sem > 1 ? " semaines" : " semaine");
+    var mois = Math.round(sem / 4.345);
+    if(mois < 1) mois = 1;
+    if(mois < 24) return "≈ " + mois + " mois";
+    var ans = Math.round((mois / 12) * 10) / 10;
+    return "≈ " + ans + (ans > 1 ? " ans" : " an");
+  }
+
+  // Épargne cumulée estimée pour l'objectif actif : pour chaque jour saisi
+  // depuis la création de l'objectif, on applique le pourcentage choisi au
+  // solde net de ce jour (peut réduire l'épargne un jour à perte), sans
+  // jamais descendre sous zéro dans l'affichage.
+  function computeEpargneObjectif(){
+    if(!state.objectif || !state.objectif.actif || !state.objectif.pourcentage) return 0;
+    var pct = state.objectif.pourcentage;
+    var dateCreation = state.objectif.dateCreation;
+    var total = 0;
+    Object.keys(state.jours).forEach(function(k){
+      if(k < dateCreation) return;
+      var j = state.jours[k];
+      if(!jourADesDonnees(j)) return;
+      total += soldeNetJour(j) * pct / 100;
+    });
+    return Math.max(0, Math.round(total));
+  }
+
   function el(html){
     var t = document.createElement("template");
     t.innerHTML = html.trim();
@@ -907,6 +1181,12 @@
   function render(){
     if(!state.config.onboardingComplete){
       renderOnboarding();
+    } else if(state.config.pinActif && state.config.pinCode && ui.locked){
+      renderPinLock();
+    } else if(ui.overlay === "reglages"){
+      renderReglagesScreen();
+    } else if(ui.overlay === "apropos"){
+      renderAProposScreen();
     } else {
       renderMain();
     }
@@ -915,6 +1195,8 @@
 
   function renderMain(){
     if(ui.tab === "etat") renderEtat();
+    else if(ui.tab === "objectif") renderObjectif();
+    else if(ui.tab === "partager") renderPartager();
     else renderAccueil();
   }
 
@@ -925,6 +1207,10 @@
           '<span class="tabbar-ic">🏠</span><span>Aujourd\'hui</span></button>' +
         '<button class="tabbar-btn '+(active==="etat"?"active":"")+'" data-tab="etat">' +
           '<span class="tabbar-ic">📊</span><span>Mon état</span></button>' +
+        '<button class="tabbar-btn '+(active==="objectif"?"active":"")+'" data-tab="objectif">' +
+          '<span class="tabbar-ic">🎯</span><span>Objectif</span></button>' +
+        '<button class="tabbar-btn '+(active==="partager"?"active":"")+'" data-tab="partager">' +
+          '<span class="tabbar-ic">📤</span><span>Partager</span></button>' +
       '</div></div>';
   }
 
@@ -1152,6 +1438,10 @@
       var finish = document.getElementById("onb3-finish");
       if(finish) finish.addEventListener("click", function(){
         state.config.onboardingComplete = true;
+        // Le tout premier rappel de sauvegarde n'arrive qu'après une semaine d'usage,
+        // pas dès la fin de la configuration (il n'y a encore rien à sauvegarder).
+        state.meta = state.meta || {};
+        state.meta.dernierRappelSauvegarde = todayKey();
         saveState();
         ui.screen = "accueil";
         ui.tab = "aujourdhui";
@@ -1287,12 +1577,20 @@
       }).join("");
     }
 
+    var objectifHtml = renderObjectifDashboardCard();
+
     var html = '' +
       '<div class="home-header">' +
-        '<div class="home-date">'+esc(formatDateLongue(new Date()))+'</div>' +
-        '<div class="home-greet">'+(seg?seg.emoji:"👋")+' Faire le point</div>' +
+        '<div class="home-header-row">' +
+          '<div>' +
+            '<div class="home-date">'+esc(formatDateLongue(new Date()))+'</div>' +
+            '<div class="home-greet">'+(seg?seg.emoji:"👋")+' Faire le point</div>' +
+          '</div>' +
+          '<button class="icon-btn" id="btn-reglages" aria-label="Réglages">⚙️</button>' +
+        '</div>' +
       '</div>' +
       soldeHtml +
+      objectifHtml +
       recetteBtnHtml +
       '<div class="charges-section">' +
         '<div class="charges-title">Charges d\'aujourd\'hui</div>' +
@@ -1320,7 +1618,41 @@
         renderModal();
       });
     });
+    var reglagesBtn = document.getElementById("btn-reglages");
+    if(reglagesBtn) reglagesBtn.addEventListener("click", function(){
+      ui.overlay = "reglages";
+      render();
+    });
+    var objCard = document.getElementById("objectif-dashboard-card");
+    if(objCard) objCard.addEventListener("click", function(){
+      ui.tab = "objectif";
+      render();
+    });
     attachTabBarEvents();
+  }
+
+  // Jauge de progression de l'objectif actif (F5), affichée sur le tableau
+  // de bord "Aujourd'hui". Si aucun objectif n'est défini, une invite
+  // discrète propose d'en créer un.
+  function renderObjectifDashboardCard(){
+    if(state.objectif && state.objectif.actif){
+      var obj = state.objectif;
+      var epargne = computeEpargneObjectif();
+      var pct = obj.montantCible > 0 ? Math.min(1, epargne / obj.montantCible) : 0;
+      var pctAff = Math.round(pct * 100);
+      var modele = MODELES_OBJECTIF.find(function(m){ return m.id === obj.modele; });
+      return '' +
+        '<div class="objectif-card" id="objectif-dashboard-card">' +
+          '<div class="objectif-card-head">' +
+            '<span>'+(modele?modele.emoji+' ':'🎯 ')+esc(obj.nom)+'</span>' +
+            '<span>'+pctAff+'%</span>' +
+          '</div>' +
+          '<div class="gauge-track"><div class="gauge-fill" style="width:'+pctAff+'%"></div></div>' +
+          '<div class="objectif-card-sub">'+formatFCFA(epargne)+' sur '+formatFCFA(obj.montantCible)+'</div>' +
+        '</div>';
+    }
+    return '' +
+      '<div class="objectif-prompt" id="objectif-dashboard-card">🎯 Définissez votre objectif</div>';
   }
 
   /* ===================== MON ÉTAT (semaine / mois + historique) ===================== */
@@ -1378,7 +1710,10 @@
 
     var html = '' +
       '<div class="home-header">' +
-        '<div class="home-greet">📊 Mon état</div>' +
+        '<div class="home-header-row">' +
+          '<div class="home-greet">📊 Mon état</div>' +
+          '<button class="icon-btn" id="btn-reglages" aria-label="Réglages">⚙️</button>' +
+        '</div>' +
       '</div>' +
       '<div class="seg-toggle">' +
         '<button class="seg-btn '+(periode==="semaine"?"active":"")+'" data-periode="semaine">Semaine</button>' +
@@ -1413,7 +1748,279 @@
         renderModal();
       });
     });
+    var reglagesBtnEtat = document.getElementById("btn-reglages");
+    if(reglagesBtnEtat) reglagesBtnEtat.addEventListener("click", function(){
+      ui.overlay = "reglages";
+      render();
+    });
     attachTabBarEvents();
+  }
+
+  /* ===================== MON OBJECTIF (F7) ===================== */
+  /* Création à partir de modèles pré-configurés, simulateur "3 façons
+     d'y arriver" basé sur le solde net moyen réel des dernières semaines
+     saisies, et suivi de l'objectif actif (un seul objectif à la fois,
+     conservé dans state.objectif). */
+
+  function renderObjectif(){
+    var afficherFicheActive = state.objectif && state.objectif.actif && !ui.objEditing;
+    var body = afficherFicheActive ? renderObjectifActif() : renderObjectifCreation();
+    var html = '' +
+      '<div class="home-header">' +
+        '<div class="home-header-row">' +
+          '<div class="home-greet">🎯 Mon objectif</div>' +
+          '<button class="icon-btn" id="btn-reglages" aria-label="Réglages">⚙️</button>' +
+        '</div>' +
+      '</div>' +
+      body +
+      renderTabBarHtml("objectif");
+
+    app.innerHTML = html;
+    attachObjectifEvents();
+    var reglagesBtnObj = document.getElementById("btn-reglages");
+    if(reglagesBtnObj) reglagesBtnObj.addEventListener("click", function(){
+      ui.overlay = "reglages";
+      render();
+    });
+    attachTabBarEvents();
+  }
+
+  function renderObjectifActif(){
+    var obj = state.objectif;
+    var epargne = computeEpargneObjectif();
+    var pct = obj.montantCible > 0 ? Math.min(1, epargne / obj.montantCible) : 0;
+    var pctAff = Math.round(pct * 100);
+    var restant = Math.max(0, obj.montantCible - epargne);
+    var info = computeMoyenneHebdoRecente();
+    var epargneHebdo = (obj.pourcentage && info.moyenne > 0) ? (info.moyenne * obj.pourcentage / 100) : 0;
+    var semainesRestantes = epargneHebdo > 0 ? Math.ceil(restant / epargneHebdo) : null;
+    var modele = MODELES_OBJECTIF.find(function(m){ return m.id === obj.modele; });
+    var atteint = epargne >= obj.montantCible && obj.montantCible > 0;
+
+    return '' +
+      '<div class="solde-card" style="margin:14px 20px 0;">' +
+        '<p class="solde-label">'+(modele?modele.emoji+' ':'🎯 ')+esc(obj.nom)+'</p>' +
+        '<p class="solde-value" style="color:var(--text); font-size:30px;">'+formatFCFA(epargne)+
+          ' <span style="font-size:15px; color:var(--text-dim); font-weight:600;">sur '+formatFCFA(obj.montantCible)+'</span></p>' +
+        '<div class="gauge-track"><div class="gauge-fill" style="width:'+pctAff+'%"></div></div>' +
+        (atteint
+          ? '<div class="perte-banner" style="background:rgba(52,179,126,.16); color:var(--green); margin-top:10px;">🎉 Objectif atteint !</div>'
+          : '' +
+            '<p style="color:var(--text-dim); font-size:13px; margin-top:10px;">'+pctAff+'% atteint'+
+              (obj.pourcentage ? ' · Rythme : '+obj.pourcentage+'% du solde net chaque semaine' : '')+'</p>' +
+            (semainesRestantes !== null
+              ? '<p style="color:var(--text-dim); font-size:13px; margin-top:2px;">Encore environ '+formatDureeSemaines(semainesRestantes)+' à ce rythme</p>'
+              : '<p style="color:var(--text-dim); font-size:13px; margin-top:2px;">Saisissez quelques jours de plus pour affiner l\'estimation.</p>')
+        ) +
+      '</div>' +
+      '<div class="charges-section">' +
+        '<div class="btn-row">' +
+          '<button class="btn btn-ghost btn-sm" id="obj-changer-rythme">Changer de rythme</button>' +
+          '<button class="btn btn-danger-ghost btn-sm" id="obj-supprimer">Supprimer</button>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function renderObjectifCreation(){
+    var step = ui.objStep || 1;
+    var body;
+    if(step === 1) body = objStep1();
+    else if(step === 2) body = objStep2();
+    else body = objStep3();
+    return '<div style="padding:0 20px;">' + body + '</div>';
+  }
+
+  function objStep1(){
+    var cards = MODELES_OBJECTIF.map(function(m){
+      var sel = ui.objData.modele === m.id ? "selected" : "";
+      return '' +
+        '<div class="choice-card '+sel+'" data-modele="'+m.id+'" style="padding:18px 10px;">' +
+          '<span class="emoji">'+m.emoji+'</span><span>'+esc(m.nom)+'</span>' +
+          '<span style="font-size:11px; color:var(--text-dim); font-weight:400;">'+esc(m.desc)+'</span>' +
+        '</div>';
+    }).join("");
+
+    var sousTypesHtml = "";
+    if(ui.objData.modele){
+      var modele = MODELES_OBJECTIF.find(function(m){ return m.id === ui.objData.modele; });
+      if(modele){
+        sousTypesHtml = '' +
+          '<p class="field-label">Précisez (optionnel)</p>' +
+          '<div class="emoji-grid">' +
+          modele.sousTypes.map(function(st){
+            var sel = ui.objData.sousType === st ? "selected" : "";
+            return '<div class="choice-card '+sel+'" data-soustype="'+esc(st)+'" style="flex-direction:row; padding:10px 14px; font-size:13px;">'+esc(st)+'</div>';
+          }).join("") + '</div>';
+      }
+    }
+
+    return '' +
+      '<p class="onb-eyebrow" style="margin-top:16px;">Nouvel objectif</p>' +
+      '<h1 class="onb-title" style="font-size:20px;">Quel est votre objectif ?</h1>' +
+      '<p class="onb-sub">Choisissez un modèle pour démarrer.</p>' +
+      '<div class="onb-grid" style="grid-template-columns:repeat(3,1fr);">'+cards+'</div>' +
+      sousTypesHtml +
+      '<div style="height:10px;"></div>' +
+      '<button class="btn btn-primary" id="obj1-next" '+(ui.objData.modele?"":"disabled")+'>Continuer</button>';
+  }
+
+  function objStep2(){
+    var modele = MODELES_OBJECTIF.find(function(m){ return m.id === ui.objData.modele; });
+    if(!ui.objData.nom){
+      ui.objData.nom = (modele ? modele.nom : "Mon objectif") + (ui.objData.sousType ? " — "+ui.objData.sousType : "");
+    }
+    return '' +
+      '<p class="onb-eyebrow" style="margin-top:16px;">Nouvel objectif</p>' +
+      '<h1 class="onb-title" style="font-size:20px;">Donnez les détails</h1>' +
+      '<p class="field-label">Nom de l\'objectif</p>' +
+      '<input type="text" class="text-input" id="obj-nom" value="'+esc(ui.objData.nom||"")+'" maxlength="40">' +
+      '<p class="field-label" style="margin-top:14px;">Montant cible</p>' +
+      '<div class="amount-input-wrap">' +
+        '<input type="text" inputmode="numeric" id="obj-montant" placeholder="0" value="'+esc(spacedDigits(ui.objData.montantCible))+'">' +
+        '<span class="suffix">F</span>' +
+      '</div>' +
+      '<div style="height:10px;"></div>' +
+      '<div class="btn-row">' +
+        '<button class="btn btn-ghost" id="obj2-back">Retour</button>' +
+        '<button class="btn btn-primary" id="obj2-next" '+(ui.objData.montantCible?"":"disabled")+'>Voir les scénarios</button>' +
+      '</div>';
+  }
+
+  function objStep3(){
+    var montantCible = ui.objData.montantCible || 0;
+    var scenarios = computeScenarios(montantCible);
+    var info = computeMoyenneHebdoRecente();
+
+    var note = info.nbSemaines === 0
+      ? '<div class="warn-msg">Pas encore de recette saisie : les scénarios s\'affineront dès vos premiers jours enregistrés.</div>'
+      : '<p class="field-help">Basé sur votre solde net moyen des '+info.nbSemaines+' dernière'+(info.nbSemaines>1?"s":"")+' semaine'+(info.nbSemaines>1?"s":"")+' saisie'+(info.nbSemaines>1?"s":"")+' : environ '+formatFCFA(info.moyenne)+' / semaine.</p>';
+
+    var cards = scenarios.map(function(s){
+      var sel = ui.objData.pourcentageChoisi === s.pourcentage ? "selected" : "";
+      return '' +
+        '<div class="choice-card scenario-card '+sel+'" data-scenario="'+s.pourcentage+'">' +
+          '<div>' +
+            '<div class="sc-name">'+(NOMS_SCENARIO[s.pourcentage]||"")+' · '+s.pourcentage+'%</div>' +
+            '<div class="sc-sub">'+(s.epargneHebdo>0 ? formatFCFA(s.epargneHebdo)+" / semaine" : "à déterminer")+'</div>' +
+          '</div>' +
+          '<div class="sc-duree">'+formatDureeSemaines(s.semaines)+'</div>' +
+        '</div>';
+    }).join("");
+
+    return '' +
+      '<p class="onb-eyebrow" style="margin-top:16px;">3 façons d\'y arriver</p>' +
+      '<h1 class="onb-title" style="font-size:20px;">Choisissez votre rythme</h1>' +
+      note +
+      '<div class="choice-row" style="margin-top:14px;">'+cards+'</div>' +
+      '<div class="btn-row">' +
+        '<button class="btn btn-ghost" id="obj3-back">Retour</button>' +
+        '<button class="btn btn-primary" id="obj3-finish" '+(ui.objData.pourcentageChoisi?"":"disabled")+'>Valider mon objectif</button>' +
+      '</div>';
+  }
+
+  function attachObjectifEvents(){
+    if(state.objectif && state.objectif.actif && !ui.objEditing){
+      var chRythme = document.getElementById("obj-changer-rythme");
+      if(chRythme) chRythme.addEventListener("click", function(){
+        ui.objData = {
+          modele: state.objectif.modele,
+          sousType: state.objectif.sousType,
+          nom: state.objectif.nom,
+          montantCible: state.objectif.montantCible,
+          pourcentageChoisi: null
+        };
+        ui.objEditing = true;
+        ui.objStep = 3;
+        renderObjectif();
+      });
+      var suppr = document.getElementById("obj-supprimer");
+      if(suppr) suppr.addEventListener("click", function(){
+        ui.modal = "confirm-suppr-objectif";
+        ui.modalData = {};
+        renderModal();
+      });
+      return;
+    }
+
+    var step = ui.objStep || 1;
+
+    if(step === 1){
+      app.querySelectorAll("[data-modele]").forEach(function(node){
+        node.addEventListener("click", function(){
+          ui.objData.modele = node.getAttribute("data-modele");
+          ui.objData.sousType = null;
+          renderObjectif();
+        });
+      });
+      app.querySelectorAll("[data-soustype]").forEach(function(node){
+        node.addEventListener("click", function(){
+          ui.objData.sousType = node.getAttribute("data-soustype");
+          renderObjectif();
+        });
+      });
+      var next1 = document.getElementById("obj1-next");
+      if(next1) next1.addEventListener("click", function(){ ui.objStep = 2; renderObjectif(); });
+    }
+
+    if(step === 2){
+      var nomInput = document.getElementById("obj-nom");
+      if(nomInput) nomInput.addEventListener("input", function(){ ui.objData.nom = nomInput.value; });
+      var montantInput = document.getElementById("obj-montant");
+      var next2 = document.getElementById("obj2-next");
+      attachAmountInput(montantInput, function(value){
+        ui.objData.montantCible = value;
+        if(next2) next2.disabled = !value;
+      });
+      var back2 = document.getElementById("obj2-back");
+      if(back2) back2.addEventListener("click", function(){ ui.objStep = 1; renderObjectif(); });
+      if(next2) next2.addEventListener("click", function(){
+        if(nomInput) ui.objData.nom = nomInput.value.trim() || ui.objData.nom;
+        ui.objStep = 3;
+        renderObjectif();
+      });
+    }
+
+    if(step === 3){
+      app.querySelectorAll("[data-scenario]").forEach(function(node){
+        node.addEventListener("click", function(){
+          ui.objData.pourcentageChoisi = parseInt(node.getAttribute("data-scenario"), 10);
+          renderObjectif();
+        });
+      });
+      var back3 = document.getElementById("obj3-back");
+      if(back3) back3.addEventListener("click", function(){
+        if(ui.objEditing){
+          // "Changer de rythme" ne repasse pas par le choix du modèle : Retour annule et revient à la fiche.
+          ui.objEditing = false;
+          ui.objStep = 1;
+          ui.objData = {};
+          renderObjectif();
+        } else {
+          ui.objStep = 2;
+          renderObjectif();
+        }
+      });
+      var finish3 = document.getElementById("obj3-finish");
+      if(finish3) finish3.addEventListener("click", function(){
+        var enCours = state.objectif; // conserve id + date de création si on change juste de rythme
+        state.objectif = {
+          id: enCours ? enCours.id : uid("obj"),
+          modele: ui.objData.modele,
+          sousType: ui.objData.sousType || null,
+          nom: (ui.objData.nom||"").trim() || "Mon objectif",
+          montantCible: ui.objData.montantCible,
+          dateCreation: enCours ? enCours.dateCreation : todayKey(),
+          pourcentage: ui.objData.pourcentageChoisi,
+          actif: true
+        };
+        saveState();
+        ui.objStep = 1;
+        ui.objData = {};
+        ui.objEditing = false;
+        renderObjectif();
+        showToast("Objectif enregistré.");
+      });
+    }
   }
 
   /* ===================== MODALES ===================== */
@@ -1434,6 +2041,14 @@
     else if(ui.modal === "perso-modal") sheetHtml = '<div class="modal-handle"></div>' + renderPersoForm("modal");
     else if(ui.modal === "confirm-suppr-charge") sheetHtml = modalConfirmSupprCharge();
     else if(ui.modal === "jour-detail") sheetHtml = modalJourDetail();
+    else if(ui.modal === "confirm-suppr-objectif") sheetHtml = modalConfirmSupprObjectif();
+    else if(ui.modal === "confirm-restaurer") sheetHtml = modalConfirmRestaurer();
+    else if(ui.modal === "perso-modal-reglages") sheetHtml = '<div class="modal-handle"></div>' + renderPersoForm("modal");
+    else if(ui.modal === "confirm-suppr-rubrique") sheetHtml = modalConfirmSupprRubrique();
+    else if(ui.modal === "pin-verify") sheetHtml = modalPinVerify();
+    else if(ui.modal === "pin-set") sheetHtml = modalPinSet();
+    else if(ui.modal === "pin-oublie") sheetHtml = modalPinOublie();
+    else if(ui.modal === "confirm-effacer-tout") sheetHtml = modalConfirmEffacerTout();
 
     overlay.innerHTML = '<div class="modal-sheet">' + sheetHtml + '</div>';
     document.body.appendChild(overlay);
@@ -1448,6 +2063,14 @@
     else if(ui.modal === "perso-modal") attachPersoFormEvents(function(){ renderModal(); }, true);
     else if(ui.modal === "confirm-suppr-charge") attachModalConfirmSupprChargeEvents();
     else if(ui.modal === "jour-detail") attachModalJourDetailEvents();
+    else if(ui.modal === "confirm-suppr-objectif") attachModalConfirmSupprObjectifEvents();
+    else if(ui.modal === "confirm-restaurer") attachModalConfirmRestaurerEvents();
+    else if(ui.modal === "perso-modal-reglages") attachPersoFormEvents(function(){ renderModal(); renderReglagesScreen(); }, false);
+    else if(ui.modal === "confirm-suppr-rubrique") attachModalConfirmSupprRubriqueEvents();
+    else if(ui.modal === "pin-verify") attachModalPinVerifyEvents();
+    else if(ui.modal === "pin-set") attachModalPinSetEvents();
+    else if(ui.modal === "pin-oublie") attachModalPinOublieEvents();
+    else if(ui.modal === "confirm-effacer-tout") attachModalConfirmEffacerToutEvents();
   }
 
   function closeModal(){
@@ -1652,10 +2275,936 @@
     if(close) close.addEventListener("click", closeModal);
   }
 
+  function modalConfirmSupprObjectif(){
+    return '' +
+      '<div class="modal-handle"></div>' +
+      '<div class="confirm-box">' +
+        '<h2 class="modal-title">Supprimer cet objectif ?</h2>' +
+        '<p>Votre progression enregistrée sera perdue. Cette action ne peut pas être annulée.</p>' +
+        '<div class="btn-row" style="margin-top:10px;">' +
+          '<button class="btn btn-ghost" id="confirm-suppr-obj-non">Non</button>' +
+          '<button class="btn btn-danger-ghost" id="confirm-suppr-obj-oui">Supprimer</button>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function attachModalConfirmSupprObjectifEvents(){
+    document.getElementById("confirm-suppr-obj-non").addEventListener("click", closeModal);
+    document.getElementById("confirm-suppr-obj-oui").addEventListener("click", function(){
+      state.objectif = null;
+      saveState();
+      ui.objStep = 1;
+      ui.objData = {};
+      ui.objEditing = false;
+      closeModal();
+      renderObjectif();
+    });
+  }
+
+  /* ---------- Réglages : sauvegarde et restauration (F9) ---------- */
+  /* La modale "Mes données" du Sprint 3 est remplacée au Sprint 4 par un
+     écran Réglages complet (voir renderReglagesScreen plus bas), qui
+     regroupe segment, rubriques, dioulatchai, PIN et sauvegarde/restauration
+     au même endroit (F10). La lecture de fichier reste ici, partagée entre
+     l'écran Réglages et le parcours "Code PIN oublié" du verrouillage. */
+
+  function lireEtProposerRestauration(file){
+    var reader = new FileReader();
+    reader.onload = function(){
+      var parsed;
+      try{
+        parsed = JSON.parse(reader.result);
+      }catch(e){
+        showToast("Fichier illisible.");
+        return;
+      }
+      if(!parsed || typeof parsed !== "object" || !parsed.config || !parsed.jours){
+        showToast("Ce fichier ne ressemble pas à une sauvegarde Trépor.");
+        return;
+      }
+      ui.modal = "confirm-restaurer";
+      ui.modalData = { fichier: parsed };
+      renderModal();
+    };
+    reader.onerror = function(){ showToast("Impossible de lire ce fichier."); };
+    reader.readAsText(file);
+  }
+
+  function modalConfirmRestaurer(){
+    return '' +
+      '<div class="modal-handle"></div>' +
+      '<div class="confirm-box">' +
+        '<h2 class="modal-title">Restaurer cette sauvegarde ?</h2>' +
+        '<p>Toutes les données actuelles sur cet appareil (configuration, jours saisis, objectif) seront remplacées par celles du fichier. Cette action ne peut pas être annulée.</p>' +
+        '<div class="btn-row" style="margin-top:10px;">' +
+          '<button class="btn btn-ghost" id="confirm-restaurer-non">Annuler</button>' +
+          '<button class="btn btn-danger-ghost" id="confirm-restaurer-oui">Restaurer</button>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function attachModalConfirmRestaurerEvents(){
+    document.getElementById("confirm-restaurer-non").addEventListener("click", closeModal);
+    document.getElementById("confirm-restaurer-oui").addEventListener("click", function(){
+      var parsed = ui.modalData.fichier;
+      state = normaliserEtatImporte(parsed);
+      saveState();
+      ui.modal = null;
+      ui.modalData = {};
+      ui.overlay = null;
+      ui.tab = "aujourdhui";
+      ui.objStep = 1;
+      ui.objData = {};
+      ui.objEditing = false;
+      ui.etatPeriode = "semaine";
+      ui.partagerPeriode = "jour";
+      ui.locked = !!(state.config.pinActif && state.config.pinCode);
+      render();
+      showToast("Données restaurées.");
+    });
+  }
+
+  function exporterSauvegarde(){
+    try{
+      var data = JSON.stringify(state, null, 2);
+      var blob = new Blob([data], { type:"application/json" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = "trepor_sauvegarde_" + todayKey() + ".json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+
+      state.meta = state.meta || {};
+      state.meta.derniereSauvegarde = todayKey();
+      state.meta.dernierRappelSauvegarde = todayKey();
+      saveState();
+      closeModal();
+      render();
+      showToast("Sauvegarde téléchargée.");
+    }catch(e){
+      showToast("Impossible de générer la sauvegarde sur cet appareil.");
+    }
+  }
+
+  // Rappel doux (F9) : une fois par semaine au plus, si la dernière
+  // sauvegarde date de 7 jours ou plus (ou n'a jamais été faite).
+  function verifierRappelSauvegarde(){
+    if(!state.config.onboardingComplete) return;
+    state.meta = state.meta || { derniereSauvegarde:null, dernierRappelSauvegarde:null };
+    var today = todayKey();
+    var joursDepuisSauvegarde = state.meta.derniereSauvegarde ? joursEntre(state.meta.derniereSauvegarde, today) : Infinity;
+    var joursDepuisRappel = state.meta.dernierRappelSauvegarde ? joursEntre(state.meta.dernierRappelSauvegarde, today) : Infinity;
+    if(joursDepuisSauvegarde >= RAPPEL_SAUVEGARDE_JOURS && joursDepuisRappel >= RAPPEL_SAUVEGARDE_JOURS){
+      state.meta.dernierRappelSauvegarde = today;
+      saveState();
+      setTimeout(function(){ showToast("Pensez à sauvegarder vos données 💾"); }, 700);
+    }
+  }
+
+
+  /* ===================== ÉCRAN RÉGLAGES (F10) ===================== */
+  /* Un seul écran qui regroupe : segment d'activité, véhicule et
+     dioulatchai par défaut, rubriques de charges, code PIN, et
+     sauvegarde/restauration -- comme demandé au Sprint 4. Accessible
+     depuis l'icône ⚙️ présente sur chaque onglet. */
+
+  function renderReglagesScreen(){
+    var cfg = state.config;
+
+    var segCards = SEGMENTS.map(function(s){
+      var sel = cfg.segment === s.id ? "selected" : "";
+      return '<div class="choice-card '+sel+'" data-reg-segment="'+s.id+'">' +
+        '<span class="emoji">'+s.emoji+'</span><span>'+esc(s.nom)+'</span></div>';
+    }).join("");
+
+    var isLoc = cfg.statutVehicule === "locataire";
+    var vehiculeChoice = '' +
+      '<div class="choice-row">' +
+        '<div class="choice-card '+(cfg.statutVehicule==="proprietaire"?"selected":"")+'" data-reg-statut="proprietaire">' +
+          '<span class="emoji">🚙</span><span>Propriétaire du véhicule</span></div>' +
+        '<div class="choice-card '+(isLoc?"selected":"")+'" data-reg-statut="locataire">' +
+          '<span class="emoji">🔑</span><span>Locataire (je verse le dioulatchai)</span></div>' +
+      '</div>';
+    var dioulField = isLoc ? ('' +
+        '<p class="field-label">Montant habituel du dioulatchai</p>' +
+        '<div class="amount-input-wrap">' +
+          '<input type="text" inputmode="numeric" id="reg-dioulatchai-input" placeholder="0" value="'+(cfg.dioulatchai?spacedDigits(cfg.dioulatchai):"")+'">' +
+          '<span class="suffix">F</span>' +
+        '</div>' +
+        '<p class="field-help">Proposé par défaut à chaque saisie d\'une charge « Dioulatchai », toujours modifiable ce jour-là.</p>'
+      ) : '<p class="field-help">Le dioulatchai ne concerne que les véhicules loués.</p>';
+
+    var actifsCount = cfg.rubriques.filter(function(r){ return r.actif; }).length;
+    var warnRub = actifsCount > MAX_RUBRIQUES_CONSEILLE
+      ? '<div class="warn-msg">Trop de rubriques tue le suivi.</div>'
+      : "";
+    var rubRows = cfg.rubriques.map(function(r){
+      var on = r.actif ? "on" : "";
+      var delBtn = r.perso
+        ? '<button class="charge-del" data-reg-del-rub="'+r.id+'" aria-label="Supprimer la rubrique">✕</button>'
+        : "";
+      return '' +
+        '<div class="rub-row '+on+'" style="--rub-color:'+r.couleur+'">' +
+          '<div class="rub-icon" style="background:'+r.couleur+'" data-reg-toggle-rub="'+r.id+'">'+r.icone+'</div>' +
+          '<div class="rub-name" data-reg-toggle-rub="'+r.id+'">'+esc(r.nom)+(r.perso?'<span class="rub-note">Rubrique personnalisée</span>':'')+'</div>' +
+          '<div class="switch '+on+'" data-reg-toggle-rub="'+r.id+'"></div>' +
+          delBtn +
+        '</div>';
+    }).join("");
+
+    var pinOn = !!cfg.pinActif;
+    var pinSection = '' +
+      '<div class="rub-row" style="cursor:default;">' +
+        '<div class="rub-icon" style="background:#4c8bf5">🔒</div>' +
+        '<div class="rub-name">Verrouillage par code PIN<span class="rub-note">Demandé à chaque ouverture de l\'application</span></div>' +
+        '<div class="switch '+(pinOn?"on":"")+'" id="reg-pin-switch"></div>' +
+      '</div>' +
+      (pinOn ? '<button class="btn btn-ghost btn-sm" id="reg-pin-modifier" style="margin-top:10px;">Modifier le code</button>' : "");
+
+    var derniere = state.meta && state.meta.derniereSauvegarde;
+    var derniereTxt = derniere
+      ? "Dernière sauvegarde : " + formatDateCourte(new Date(derniere + "T00:00:00"))
+      : "Aucune sauvegarde effectuée pour l'instant.";
+
+    var html = '' +
+      '<div class="onb">' +
+        '<div class="back-header">' +
+          '<button class="icon-btn" id="reg-back" aria-label="Retour">←</button>' +
+          '<h1 class="onb-title" style="margin:0; font-size:20px;">Réglages</h1>' +
+        '</div>' +
+
+        '<div class="settings-section">' +
+          '<div class="settings-section-title">Segment d\'activité</div>' +
+          '<div class="onb-grid">'+segCards+'</div>' +
+        '</div>' +
+
+        '<div class="settings-section">' +
+          '<div class="settings-section-title">Véhicule et dioulatchai</div>' +
+          vehiculeChoice + dioulField +
+        '</div>' +
+
+        '<div class="settings-section">' +
+          '<div class="settings-section-title">Rubriques de charges</div>' +
+          warnRub +
+          '<div class="rub-list">'+rubRows+'</div>' +
+          '<div class="add-rub-btn" id="reg-add-perso">＋ Ajouter une rubrique personnalisée</div>' +
+        '</div>' +
+
+        '<div class="settings-section">' +
+          '<div class="settings-section-title">Sécurité</div>' +
+          pinSection +
+        '</div>' +
+
+        '<div class="settings-section">' +
+          '<div class="settings-section-title">Mes données</div>' +
+          '<p class="field-help" style="margin-top:0;">'+esc(derniereTxt)+'</p>' +
+          '<div style="display:flex; flex-direction:column; gap:10px;">' +
+            '<button class="btn btn-primary" id="reg-sauvegarder">⬇️ Sauvegarder mes données</button>' +
+            '<button class="btn btn-ghost" id="reg-restaurer">⬆️ Restaurer une sauvegarde</button>' +
+            '<input type="file" id="reg-input-restaurer" accept="application/json,.json" style="display:none;">' +
+          '</div>' +
+          '<p class="field-help">Vos données restent sur votre téléphone. Sauvegardez chaque semaine : en cas de changement de téléphone ou d\'effacement du navigateur, c\'est le seul moyen de les retrouver.</p>' +
+        '</div>' +
+
+        '<button class="btn btn-ghost" id="reg-apropos">ℹ️ À propos de MonDjai/Trépor</button>' +
+      '</div>';
+
+    app.innerHTML = html;
+    attachReglagesEvents();
+  }
+
+  function attachReglagesEvents(){
+    var back = document.getElementById("reg-back");
+    if(back) back.addEventListener("click", function(){ ui.overlay = null; render(); });
+
+    app.querySelectorAll("[data-reg-segment]").forEach(function(node){
+      node.addEventListener("click", function(){
+        state.config.segment = node.getAttribute("data-reg-segment");
+        saveState();
+        renderReglagesScreen();
+        showToast("Segment mis à jour.");
+      });
+    });
+
+    app.querySelectorAll("[data-reg-statut]").forEach(function(node){
+      node.addEventListener("click", function(){
+        state.config.statutVehicule = node.getAttribute("data-reg-statut");
+        var dioul = state.config.rubriques.find(function(r){ return r.id === "dioulatchai"; });
+        if(dioul) dioul.actif = state.config.statutVehicule === "locataire";
+        saveState();
+        renderReglagesScreen();
+      });
+    });
+    var dInput = document.getElementById("reg-dioulatchai-input");
+    attachAmountInput(dInput, function(value){
+      state.config.dioulatchai = value;
+      saveState();
+    });
+
+    app.querySelectorAll("[data-reg-toggle-rub]").forEach(function(node){
+      node.addEventListener("click", function(){
+        var id = node.getAttribute("data-reg-toggle-rub");
+        var r = state.config.rubriques.find(function(x){ return x.id === id; });
+        if(r){ r.actif = !r.actif; saveState(); renderReglagesScreen(); }
+      });
+    });
+    app.querySelectorAll("[data-reg-del-rub]").forEach(function(node){
+      node.addEventListener("click", function(e){
+        e.stopPropagation();
+        ui.modal = "confirm-suppr-rubrique";
+        ui.modalData = { rubriqueId: node.getAttribute("data-reg-del-rub") };
+        renderModal();
+      });
+    });
+
+    var addPerso = document.getElementById("reg-add-perso");
+    if(addPerso) addPerso.addEventListener("click", function(){
+      ui.modal = "perso-modal-reglages";
+      ui.modalData = { nom:"", icone:"", emojiCustom:"", couleur:COLOR_CHOICES[0] };
+      renderModal();
+    });
+
+    var pinSwitch = document.getElementById("reg-pin-switch");
+    if(pinSwitch) pinSwitch.addEventListener("click", function(){
+      if(state.config.pinActif){
+        ui.modal = "pin-verify";
+        ui.modalData = { mode:"disable", pin:"" };
+      } else {
+        ui.modal = "pin-set";
+        ui.modalData = { mode:"activate", step:1, firstPin:"", pin:"" };
+      }
+      renderModal();
+    });
+    var pinModifier = document.getElementById("reg-pin-modifier");
+    if(pinModifier) pinModifier.addEventListener("click", function(){
+      ui.modal = "pin-verify";
+      ui.modalData = { mode:"change", pin:"" };
+      renderModal();
+    });
+
+    var save = document.getElementById("reg-sauvegarder");
+    if(save) save.addEventListener("click", exporterSauvegarde);
+    var restoreBtn = document.getElementById("reg-restaurer");
+    var fileInput = document.getElementById("reg-input-restaurer");
+    if(restoreBtn && fileInput){
+      restoreBtn.addEventListener("click", function(){ fileInput.click(); });
+      fileInput.addEventListener("change", function(){
+        var file = fileInput.files && fileInput.files[0];
+        fileInput.value = "";
+        if(!file) return;
+        lireEtProposerRestauration(file);
+      });
+    }
+
+    var apropos = document.getElementById("reg-apropos");
+    if(apropos) apropos.addEventListener("click", function(){ ui.overlay = "apropos"; render(); });
+  }
+
+  function modalConfirmSupprRubrique(){
+    return '' +
+      '<div class="modal-handle"></div>' +
+      '<div class="confirm-box">' +
+        '<h2 class="modal-title">Supprimer cette rubrique ?</h2>' +
+        '<p>Les charges déjà enregistrées avec cette rubrique restent dans votre historique ; elle n\'apparaîtra simplement plus dans les listes.</p>' +
+        '<div class="btn-row" style="margin-top:10px;">' +
+          '<button class="btn btn-ghost" id="confirm-suppr-rub-non">Non</button>' +
+          '<button class="btn btn-danger-ghost" id="confirm-suppr-rub-oui">Supprimer</button>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function attachModalConfirmSupprRubriqueEvents(){
+    document.getElementById("confirm-suppr-rub-non").addEventListener("click", closeModal);
+    document.getElementById("confirm-suppr-rub-oui").addEventListener("click", function(){
+      var id = ui.modalData.rubriqueId;
+      state.config.rubriques = state.config.rubriques.filter(function(r){ return r.id !== id; });
+      saveState();
+      closeModal();
+      renderReglagesScreen();
+      showToast("Rubrique supprimée.");
+    });
+  }
+
+  /* ===================== ÉCRAN À PROPOS (F10) ===================== */
+
+  function renderAProposScreen(){
+    var html = '' +
+      '<div class="onb">' +
+        '<div class="back-header">' +
+          '<button class="icon-btn" id="apropos-back" aria-label="Retour">←</button>' +
+          '<h1 class="onb-title" style="margin:0; font-size:20px;">À propos</h1>' +
+        '</div>' +
+        '<div style="text-align:center; margin:14px 0 20px;">' +
+          '<div style="font-size:44px;">🧭</div>' +
+          '<div style="font-size:21px; font-weight:800; margin-top:6px;">MonDjai/Trépor</div>' +
+        '</div>' +
+        '<div class="settings-section">' +
+          '<p style="font-size:16px; font-weight:800; color:var(--accent); margin:0 0 12px;">Chaque jour compte : on note, on avance.</p>' +
+          '<p style="color:var(--text-dim); font-size:14px; line-height:1.6; margin:0 0 12px;">MonDjai/Trépor est le carnet que vous n\'avez jamais le temps de tenir. Notez votre recette et vos charges du jour, et sachez tout de suite ce qu\'il vous reste vraiment — en 30 secondes, sans calcul de tête.</p>' +
+          '<p style="color:var(--text-dim); font-size:14px; line-height:1.6; margin:0;">Vos données restent sur votre téléphone : rien n\'est envoyé nulle part, et l\'application fonctionne sans connexion, même une fois installée.</p>' +
+        '</div>' +
+        '<p style="text-align:center; color:var(--text-faint); font-size:12px; margin-top:6px;">MonDjai/Trépor fait partie de la famille d\'applis MonDjai pour les métiers du terrain.</p>' +
+      '</div>';
+    app.innerHTML = html;
+    document.getElementById("apropos-back").addEventListener("click", function(){ ui.overlay = "reglages"; render(); });
+  }
+
+  /* ===================== CODE PIN (F10) ===================== */
+  /* Verrouillage optionnel à l'ouverture. Le code (4 chiffres) est stocké
+     localement (state.config.pinCode) -- il ne protège pas contre quelqu'un
+     qui aurait accès aux fichiers du téléphone, seulement contre un regard
+     ou une manipulation de passage. */
+
+  function renderPinDots(pin){
+    pin = pin || "";
+    var dots = [0,1,2,3].map(function(i){
+      return '<div class="pin-dot '+(pin.length > i ? "filled" : "")+'"></div>';
+    }).join("");
+    return '<div class="pin-dots">'+dots+'</div>';
+  }
+
+  function renderPinKeypad(){
+    var keys = ["1","2","3","4","5","6","7","8","9","","0","back"];
+    return '<div class="pin-keypad">' + keys.map(function(k){
+      if(k === "") return '<div class="pin-key empty"></div>';
+      if(k === "back") return '<button class="pin-key" data-pin-action="back" aria-label="Effacer">⌫</button>';
+      return '<button class="pin-key" data-pin-digit="'+k+'">'+k+'</button>';
+    }).join("") + '</div>';
+  }
+
+  // currentPin : valeur actuelle du code en cours de saisie.
+  // onUpdate(nouveauPin) : appelé après chaque frappe (chiffre ou effacement).
+  function attachPinKeypadEvents(currentPin, onUpdate){
+    currentPin = currentPin || "";
+    document.querySelectorAll("[data-pin-digit]").forEach(function(node){
+      node.addEventListener("click", function(){
+        if(currentPin.length >= 4) return;
+        onUpdate(currentPin + node.getAttribute("data-pin-digit"));
+      });
+    });
+    var back = document.querySelector('[data-pin-action="back"]');
+    if(back) back.addEventListener("click", function(){
+      onUpdate(currentPin.slice(0, -1));
+    });
+  }
+
+  function modalPinVerify(){
+    var mode = ui.modalData.mode;
+    var titre = mode === "disable" ? "Désactiver le code PIN" : "Confirmez votre code actuel";
+    var sub = mode === "disable"
+      ? "Entrez votre code PIN pour désactiver le verrouillage."
+      : "Entrez votre code PIN actuel pour le modifier.";
+    return '' +
+      '<div class="modal-handle"></div>' +
+      '<h2 class="modal-title">'+titre+'</h2>' +
+      '<p class="modal-sub">'+sub+'</p>' +
+      renderPinDots(ui.modalData.pin) +
+      renderPinKeypad() +
+      '<div style="height:4px"></div>' +
+      '<button class="btn btn-ghost" id="pin-verify-annuler">Annuler</button>';
+  }
+
+  function attachModalPinVerifyEvents(){
+    document.getElementById("pin-verify-annuler").addEventListener("click", closeModal);
+    attachPinKeypadEvents(ui.modalData.pin, function(next){
+      ui.modalData.pin = next;
+      if(next.length < 4){ renderModal(); return; }
+      if(next !== state.config.pinCode){
+        showToast("Code incorrect.");
+        ui.modalData.pin = "";
+        renderModal();
+        return;
+      }
+      var mode = ui.modalData.mode;
+      if(mode === "disable"){
+        state.config.pinActif = false;
+        state.config.pinCode = null;
+        saveState();
+        closeModal();
+        if(ui.overlay === "reglages") renderReglagesScreen();
+        showToast("Verrouillage désactivé.");
+      } else {
+        ui.modal = "pin-set";
+        ui.modalData = { mode:"change", step:1, firstPin:"", pin:"" };
+        renderModal();
+      }
+    });
+  }
+
+  function modalPinSet(){
+    var d = ui.modalData;
+    var titre = d.step === 1 ? "Choisissez un code à 4 chiffres" : "Confirmez le code";
+    var sub = d.step === 1
+      ? "Ce code vous sera demandé à chaque ouverture de l'application."
+      : "Entrez à nouveau le même code pour confirmer.";
+    return '' +
+      '<div class="modal-handle"></div>' +
+      '<h2 class="modal-title">'+titre+'</h2>' +
+      '<p class="modal-sub">'+sub+'</p>' +
+      renderPinDots(d.pin) +
+      renderPinKeypad() +
+      '<div style="height:4px"></div>' +
+      '<button class="btn btn-ghost" id="pin-set-annuler">Annuler</button>';
+  }
+
+  function attachModalPinSetEvents(){
+    document.getElementById("pin-set-annuler").addEventListener("click", closeModal);
+    attachPinKeypadEvents(ui.modalData.pin, function(next){
+      ui.modalData.pin = next;
+      if(next.length < 4){ renderModal(); return; }
+
+      if(ui.modalData.step === 1){
+        ui.modalData.firstPin = next;
+        ui.modalData.pin = "";
+        ui.modalData.step = 2;
+        renderModal();
+        return;
+      }
+
+      if(next !== ui.modalData.firstPin){
+        showToast("Les deux codes ne correspondent pas. Recommencez.");
+        ui.modalData.step = 1;
+        ui.modalData.firstPin = "";
+        ui.modalData.pin = "";
+        renderModal();
+        return;
+      }
+
+      var mode = ui.modalData.mode;
+      state.config.pinCode = next;
+      state.config.pinActif = true;
+      saveState();
+      closeModal();
+      if(ui.overlay === "reglages") renderReglagesScreen();
+      showToast(mode === "change" ? "Code PIN modifié." : "Verrouillage activé.");
+    });
+  }
+
+  function renderPinLock(){
+    var pin = ui.lockPin || "";
+    var html = '' +
+      '<div class="onb" style="justify-content:center; align-items:center; text-align:center; flex:1;">' +
+        '<div style="font-size:42px; margin-bottom:4px;">🔒</div>' +
+        '<h1 class="onb-title" style="text-align:center;">Code PIN</h1>' +
+        '<p class="onb-sub" style="text-align:center;">Entrez votre code pour ouvrir MonDjai/Trépor.</p>' +
+        renderPinDots(pin) +
+        renderPinKeypad() +
+        '<div style="height:16px"></div>' +
+        '<button class="btn btn-ghost btn-sm" id="lock-pin-oublie">Code PIN oublié ?</button>' +
+      '</div>';
+    app.innerHTML = html;
+    attachPinKeypadEvents(pin, function(next){
+      ui.lockPin = next;
+      if(next.length < 4){ renderPinLock(); return; }
+      if(next === state.config.pinCode){
+        ui.lockPin = "";
+        ui.locked = false;
+        render();
+      } else {
+        showToast("Code incorrect.");
+        ui.lockPin = "";
+        renderPinLock();
+      }
+    });
+    document.getElementById("lock-pin-oublie").addEventListener("click", function(){
+      ui.modal = "pin-oublie";
+      ui.modalData = {};
+      renderModal();
+    });
+  }
+
+  function modalPinOublie(){
+    return '' +
+      '<div class="modal-handle"></div>' +
+      '<h2 class="modal-title">Code PIN oublié</h2>' +
+      '<p class="modal-sub">Vos données restent sur ce téléphone. Deux solutions :</p>' +
+      '<div style="display:flex; flex-direction:column; gap:10px;">' +
+        '<button class="btn btn-primary" id="oublie-restaurer">⬆️ Restaurer une sauvegarde</button>' +
+        '<input type="file" id="oublie-input-restaurer" accept="application/json,.json" style="display:none;">' +
+        '<button class="btn btn-danger-ghost" id="oublie-effacer">Effacer les données de cet appareil</button>' +
+      '</div>' +
+      '<p class="field-help" style="margin-top:14px;">Restaurer remplace les données actuelles par celles d\'un fichier de sauvegarde. Effacer repart de zéro : à réserver au cas où vous n\'avez aucune sauvegarde.</p>' +
+      '<div style="height:4px"></div>' +
+      '<button class="btn btn-ghost" id="oublie-annuler">Retour</button>';
+  }
+
+  function attachModalPinOublieEvents(){
+    document.getElementById("oublie-annuler").addEventListener("click", closeModal);
+    var restoreBtn = document.getElementById("oublie-restaurer");
+    var fileInput = document.getElementById("oublie-input-restaurer");
+    if(restoreBtn && fileInput){
+      restoreBtn.addEventListener("click", function(){ fileInput.click(); });
+      fileInput.addEventListener("change", function(){
+        var file = fileInput.files && fileInput.files[0];
+        fileInput.value = "";
+        if(!file) return;
+        lireEtProposerRestauration(file);
+      });
+    }
+    document.getElementById("oublie-effacer").addEventListener("click", function(){
+      ui.modal = "confirm-effacer-tout";
+      ui.modalData = {};
+      renderModal();
+    });
+  }
+
+  function modalConfirmEffacerTout(){
+    return '' +
+      '<div class="modal-handle"></div>' +
+      '<div class="confirm-box">' +
+        '<h2 class="modal-title">Effacer toutes les données ?</h2>' +
+        '<p>Toute la configuration et tous les jours enregistrés sur cet appareil seront définitivement supprimés. Cette action ne peut pas être annulée.</p>' +
+        '<div class="btn-row" style="margin-top:10px;">' +
+          '<button class="btn btn-ghost" id="confirm-effacer-non">Annuler</button>' +
+          '<button class="btn btn-danger-ghost" id="confirm-effacer-oui">Tout effacer</button>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function attachModalConfirmEffacerToutEvents(){
+    document.getElementById("confirm-effacer-non").addEventListener("click", closeModal);
+    document.getElementById("confirm-effacer-oui").addEventListener("click", function(){
+      state = defaultState();
+      try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+      ui.modal = null;
+      ui.modalData = {};
+      ui.overlay = null;
+      ui.locked = false;
+      ui.lockPin = "";
+      ui.tab = "aujourdhui";
+      ui.screen = "onb1";
+      render();
+      showToast("Données effacées. Configurons l'application.");
+    });
+  }
+
+  /* ===================== ÉCRAN PARTAGER (F8) ===================== */
+  /* Génère, entièrement hors ligne (canvas natif du navigateur, sans
+     bibliothèque externe), une image récapitulative du jour, de la
+     semaine ou du mois -- à montrer au propriétaire du véhicule, au
+     syndicat, ou à l'appui d'une demande de financement. */
+
+  function computeDonneesPartage(periode){
+    var now = new Date();
+    if(periode === "semaine" || periode === "mois"){
+      var range = periode === "mois" ? getMonthRange(now) : getWeekRange(now);
+      var stats = computeEtatStats(range);
+      var titre = periode === "mois"
+        ? capitalize(MOIS_FR[now.getMonth()]) + " " + now.getFullYear()
+        : "Du " + formatDateCourte(range.startDate) + " au " + formatDateCourte(range.endDate);
+      return {
+        periode: periode,
+        titrePeriode: titre,
+        hasData: stats.keys.length > 0,
+        recette: stats.recetteTotale,
+        recetteInconnue: false,
+        chargesTotales: stats.chargesTotales,
+        solde: stats.soldeCumule,
+        parRubrique: stats.parRubrique,
+        moyenne: stats.moyenne
+      };
+    }
+    // periode === "jour"
+    var key = todayKey();
+    var j = state.jours[key] || { recette:null, charges:[] };
+    var parRubrique = {};
+    (j.charges || []).forEach(function(c){
+      parRubrique[c.rubriqueId] = (parRubrique[c.rubriqueId] || 0) + c.montant;
+    });
+    var chargesTotales = (j.charges || []).reduce(function(s,c){ return s + c.montant; }, 0);
+    var recette = j.recette;
+    return {
+      periode: "jour",
+      titrePeriode: capitalize(formatDateLongue(now)),
+      hasData: recette !== null || (j.charges && j.charges.length > 0),
+      recette: recette || 0,
+      recetteInconnue: recette === null,
+      chargesTotales: chargesTotales,
+      solde: (recette || 0) - chargesTotales,
+      parRubrique: parRubrique
+    };
+  }
+
+  function dessinerRectArrondi(ctx, x, y, w, h, r){
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y,     x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x,     y + h, r);
+    ctx.arcTo(x,     y + h, x,     y,     r);
+    ctx.arcTo(x,     y,     x + w, y,     r);
+    ctx.closePath();
+  }
+
+  var SHARE_FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+
+  function dessinerCartePartage(ctx, data){
+    var W = SHARE_W, H = SHARE_H, pad = 64;
+
+    var fond = ctx.createLinearGradient(0, 0, 0, H);
+    fond.addColorStop(0, "#171b25");
+    fond.addColorStop(1, "#0c0e13");
+    ctx.fillStyle = fond;
+    ctx.fillRect(0, 0, W, H);
+
+    var y = pad + 34;
+
+    // Marque
+    ctx.fillStyle = "#f5a623";
+    ctx.beginPath();
+    ctx.arc(pad + 28, y - 8, 28, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#11141a";
+    ctx.font = "800 30px " + SHARE_FONT;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("T", pad + 28, y - 6);
+    ctx.textBaseline = "alphabetic";
+    ctx.textAlign = "left";
+
+    ctx.fillStyle = "#f2f3f5";
+    ctx.font = "800 34px " + SHARE_FONT;
+    ctx.fillText("MonDjai/Trépor", pad + 68, y - 16);
+    ctx.fillStyle = "#9aa0ac";
+    ctx.font = "600 22px " + SHARE_FONT;
+    ctx.fillText("Chaque jour compte", pad + 68, y + 14);
+
+    y += 78;
+    var seg = SEGMENTS.find(function(s){ return s.id === state.config.segment; });
+    ctx.fillStyle = "#9aa0ac";
+    ctx.font = "700 25px " + SHARE_FONT;
+    var segLabel = seg ? (seg.emoji + " " + seg.nom + "  ·  ") : "";
+    ctx.fillText(segLabel + data.titrePeriode, pad, y);
+
+    y += 44;
+    ctx.strokeStyle = "#2a2f3b";
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad, y); ctx.stroke();
+    y += 60;
+
+    if(!data.hasData){
+      ctx.fillStyle = "#666c78";
+      ctx.font = "600 28px " + SHARE_FONT;
+      ctx.textAlign = "center";
+      ctx.fillText("Rien à partager pour cette période pour l'instant.", W/2, H/2);
+      ctx.textAlign = "left";
+      return;
+    }
+
+    var enPerte = data.solde < 0;
+    var labelSolde = data.periode === "jour" ? "SOLDE NET DU JOUR"
+      : data.periode === "semaine" ? "SOLDE NET DE LA SEMAINE"
+      : "SOLDE NET DU MOIS";
+    ctx.fillStyle = "#9aa0ac";
+    ctx.font = "800 24px " + SHARE_FONT;
+    ctx.fillText(labelSolde, pad, y);
+    y += 74;
+    ctx.fillStyle = enPerte ? "#ff6b5e" : "#34b37e";
+    ctx.font = "900 88px " + SHARE_FONT;
+    ctx.fillText(formatFCFA(data.solde), pad, y);
+    y += 26;
+
+    if(enPerte){
+      y += 34;
+      var texte = (data.periode === "jour" ? "Jour à perte" : "Période à perte") + " : " + formatFCFA(Math.abs(data.solde));
+      ctx.font = "800 27px " + SHARE_FONT;
+      var tw = ctx.measureText(texte).width;
+      var bh = 56, bw = tw + 48;
+      dessinerRectArrondi(ctx, pad, y - bh + 14, bw, bh, bh/2);
+      ctx.fillStyle = "rgba(255,107,94,0.16)";
+      ctx.fill();
+      ctx.fillStyle = "#ff6b5e";
+      ctx.textBaseline = "middle";
+      ctx.fillText(texte, pad + 24, y - bh/2 + 14 + bh/2);
+      ctx.textBaseline = "alphabetic";
+      y += 40;
+    } else {
+      y += 30;
+    }
+
+    ctx.strokeStyle = "#2a2f3b";
+    ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad, y); ctx.stroke();
+    y += 56;
+
+    var colW = (W - pad*2) / 2;
+    ctx.fillStyle = "#9aa0ac";
+    ctx.font = "800 22px " + SHARE_FONT;
+    ctx.fillText(data.periode === "jour" ? "RECETTE" : "RECETTE TOTALE", pad, y);
+    ctx.fillText(data.periode === "jour" ? "CHARGES" : "CHARGES TOTALES", pad + colW, y);
+    y += 48;
+    ctx.fillStyle = "#f2f3f5";
+    ctx.font = "800 44px " + SHARE_FONT;
+    ctx.fillText(data.recetteInconnue ? "—" : formatFCFA(data.recette), pad, y);
+    ctx.fillText(formatFCFA(data.chargesTotales), pad + colW, y);
+
+    if(data.periode !== "jour"){
+      y += 62;
+      ctx.fillStyle = "#9aa0ac";
+      ctx.font = "800 22px " + SHARE_FONT;
+      ctx.fillText("MOYENNE / JOUR", pad, y);
+      y += 44;
+      ctx.fillStyle = "#f2f3f5";
+      ctx.font = "800 36px " + SHARE_FONT;
+      ctx.fillText(formatFCFA(data.moyenne), pad, y);
+    }
+
+    y += 58;
+    ctx.strokeStyle = "#2a2f3b";
+    ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad, y); ctx.stroke();
+    y += 54;
+
+    ctx.fillStyle = "#f2f3f5";
+    ctx.font = "800 29px " + SHARE_FONT;
+    ctx.fillText("Charges par rubrique", pad, y);
+    y += 50;
+
+    var rubIds = Object.keys(data.parRubrique).sort(function(a,b){
+      return data.parRubrique[b] - data.parRubrique[a];
+    });
+    var maxRows = 6;
+    if(rubIds.length === 0){
+      ctx.fillStyle = "#666c78";
+      ctx.font = "600 25px " + SHARE_FONT;
+      ctx.fillText("Aucune charge enregistrée.", pad, y);
+      y += 42;
+    } else {
+      rubIds.slice(0, maxRows).forEach(function(id){
+        var r = state.config.rubriques.find(function(x){ return x.id === id; });
+        var nom = r ? r.nom : "Rubrique supprimée";
+        var couleur = r ? r.couleur : "#7f8c9a";
+        ctx.fillStyle = couleur;
+        dessinerRectArrondi(ctx, pad, y - 22, 16, 16, 4);
+        ctx.fill();
+        ctx.fillStyle = "#f2f3f5";
+        ctx.font = "600 27px " + SHARE_FONT;
+        ctx.fillText(nom, pad + 30, y - 6);
+        ctx.textAlign = "right";
+        ctx.font = "700 27px " + SHARE_FONT;
+        ctx.fillText(formatFCFA(data.parRubrique[id]), W - pad, y - 6);
+        ctx.textAlign = "left";
+        y += 44;
+      });
+      if(rubIds.length > maxRows){
+        ctx.fillStyle = "#666c78";
+        ctx.font = "600 23px " + SHARE_FONT;
+        ctx.fillText("+ " + (rubIds.length - maxRows) + " autre(s) rubrique(s)", pad, y);
+        y += 40;
+      }
+    }
+
+    var footY = H - 74;
+    ctx.strokeStyle = "#2a2f3b";
+    ctx.beginPath(); ctx.moveTo(pad, footY - 26); ctx.lineTo(W - pad, footY - 26); ctx.stroke();
+    ctx.fillStyle = "#666c78";
+    ctx.font = "500 21px " + SHARE_FONT;
+    ctx.fillText("Récapitulatif généré automatiquement à partir des données saisies — document informatif.", pad, footY + 6);
+    ctx.fillText("Créé le " + formatDateCourte(new Date()) + " avec MonDjai/Trépor", pad, footY + 34);
+  }
+
+  function nomFichierPartage(periode){
+    return "trepor_" + periode + "_" + todayKey() + ".png";
+  }
+
+  function creerCanvasPartage(periode){
+    var canvas = document.createElement("canvas");
+    canvas.width = SHARE_W;
+    canvas.height = SHARE_H;
+    dessinerCartePartage(canvas.getContext("2d"), computeDonneesPartage(periode));
+    return canvas;
+  }
+
+  function telechargerBlob(blob, nomFichier){
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = nomFichier;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  }
+
+  function telechargerImagePartage(periode){
+    var canvas = creerCanvasPartage(periode);
+    canvas.toBlob(function(blob){
+      if(!blob){ showToast("Impossible de générer l'image sur cet appareil."); return; }
+      telechargerBlob(blob, nomFichierPartage(periode));
+      showToast("Image téléchargée.");
+    }, "image/png", 0.95);
+  }
+
+  function partagerImagePartage(periode){
+    var canvas = creerCanvasPartage(periode);
+    canvas.toBlob(function(blob){
+      if(!blob){ showToast("Impossible de générer l'image sur cet appareil."); return; }
+      var fichier = null;
+      try{ fichier = new File([blob], nomFichierPartage(periode), { type:"image/png" }); }catch(e){ fichier = null; }
+      if(fichier && navigator.share && navigator.canShare && navigator.canShare({ files:[fichier] })){
+        navigator.share({ files:[fichier], title:"MonDjai/Trépor", text:"Mon état — MonDjai/Trépor" })
+          .catch(function(){ /* partage annulé, rien à faire */ });
+      } else {
+        telechargerBlob(blob, nomFichierPartage(periode));
+        showToast("Image téléchargée (partage direct indisponible sur cet appareil).");
+      }
+    }, "image/png", 0.95);
+  }
+
+  function renderPartager(){
+    var periode = ui.partagerPeriode || "jour";
+    var data = computeDonneesPartage(periode);
+
+    var html = '' +
+      '<div class="home-header">' +
+        '<div class="home-header-row">' +
+          '<div class="home-greet">📤 Partager</div>' +
+          '<button class="icon-btn" id="btn-reglages" aria-label="Réglages">⚙️</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="seg-toggle">' +
+        '<button class="seg-btn '+(periode==="jour"?"active":"")+'" data-partage-periode="jour">Jour</button>' +
+        '<button class="seg-btn '+(periode==="semaine"?"active":"")+'" data-partage-periode="semaine">Semaine</button>' +
+        '<button class="seg-btn '+(periode==="mois"?"active":"")+'" data-partage-periode="mois">Mois</button>' +
+      '</div>' +
+      '<div class="share-preview-wrap"><canvas id="partage-canvas" width="'+SHARE_W+'" height="'+SHARE_H+'"></canvas></div>' +
+      '<div class="share-actions">' +
+        '<button class="btn btn-primary" id="btn-partager" '+(data.hasData?"":"disabled")+'>📤 Partager</button>' +
+        '<button class="btn btn-ghost" id="btn-telecharger-image" '+(data.hasData?"":"disabled")+'>⬇️ Télécharger l\'image</button>' +
+      '</div>' +
+      renderTabBarHtml("partager");
+
+    app.innerHTML = html;
+
+    var canvas = document.getElementById("partage-canvas");
+    if(canvas) dessinerCartePartage(canvas.getContext("2d"), data);
+
+    var reglagesBtnPartage = document.getElementById("btn-reglages");
+    if(reglagesBtnPartage) reglagesBtnPartage.addEventListener("click", function(){
+      ui.overlay = "reglages";
+      render();
+    });
+    app.querySelectorAll("[data-partage-periode]").forEach(function(node){
+      node.addEventListener("click", function(){
+        ui.partagerPeriode = node.getAttribute("data-partage-periode");
+        renderPartager();
+      });
+    });
+    var btnShare = document.getElementById("btn-partager");
+    if(btnShare) btnShare.addEventListener("click", function(){ partagerImagePartage(periode); });
+    var btnDownload = document.getElementById("btn-telecharger-image");
+    if(btnDownload) btnDownload.addEventListener("click", function(){ telechargerImagePartage(periode); });
+
+    attachTabBarEvents();
+  }
+
+
   /* ---------- Démarrage ---------- */
 
   state = loadState();
+  ui.locked = !!(state.config.pinActif && state.config.pinCode);
   render();
+  verifierRappelSauvegarde();
 
   // Service worker (mode hors ligne)
   if("serviceWorker" in navigator){
