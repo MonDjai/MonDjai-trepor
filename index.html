@@ -49,7 +49,7 @@
     background:var(--bg);
     display:flex;
     flex-direction:column;
-    padding-bottom:calc(90px + var(--safe-bottom));
+    padding-bottom:calc(120px + var(--safe-bottom));
   }
   button{font-family:inherit;}
   input{font-family:inherit;}
@@ -471,7 +471,7 @@
   .fab{
     position:fixed;
     right:20px;
-    bottom:calc(24px + var(--safe-bottom));
+    bottom:calc(94px + var(--safe-bottom));
     width:60px;height:60px;
     border-radius:50%;
     background:var(--accent);
@@ -489,6 +489,86 @@
     margin:0 auto;
     position:relative;
   }
+
+  /* ---------- Barre de navigation (onglets) ---------- */
+  .tabbar-wrap{
+    position:fixed;
+    left:0;right:0;
+    bottom:0;
+    z-index:50;
+    pointer-events:none;
+  }
+  .tabbar{
+    max-width:520px;
+    margin:0 auto;
+    display:flex;
+    background:var(--card);
+    border-top:1px solid var(--border);
+    padding:8px 10px calc(8px + var(--safe-bottom));
+    pointer-events:auto;
+  }
+  .tabbar-btn{
+    flex:1;
+    background:transparent;
+    border:none;
+    color:var(--text-dim);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:3px;
+    font-size:11px;
+    font-weight:700;
+    padding:6px 4px;
+    cursor:pointer;
+    border-radius:12px;
+  }
+  .tabbar-btn .tabbar-ic{font-size:20px;}
+  .tabbar-btn.active{color:var(--accent);}
+
+  /* ---------- Mon état ---------- */
+  .seg-toggle{
+    margin:16px 20px 0;
+    display:flex;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:4px;
+    gap:4px;
+  }
+  .seg-btn{
+    flex:1;
+    background:transparent;
+    border:none;
+    color:var(--text-dim);
+    font-weight:700;
+    font-size:14px;
+    padding:10px 0;
+    border-radius:9px;
+    cursor:pointer;
+  }
+  .seg-btn.active{background:var(--accent); color:var(--accent-text);}
+  .etat-period-label{
+    margin:10px 20px 0;
+    color:var(--text-dim);
+    font-size:13px;
+    font-weight:600;
+    text-align:center;
+    text-transform:capitalize;
+  }
+  .day-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--radius-sm);
+    padding:14px 14px;
+    margin-bottom:8px;
+    cursor:pointer;
+  }
+  .day-row-date{font-size:14px; font-weight:700; text-transform:capitalize;}
+  .day-row-solde{font-size:15px; font-weight:800; color:var(--green);}
+  .day-row-solde.neg{color:var(--red);}
 
   /* ---------- Modales ---------- */
   .modal-overlay{
@@ -601,8 +681,11 @@
   "use strict";
 
   /* =========================================================
-     MonDjai/Trépor — Sprint 1
-     Configuration initiale, saisie du jour, calcul automatique.
+     MonDjai/Trépor — Sprints 1 et 2
+     Sprint 1 : configuration initiale, saisie du jour, calcul automatique.
+     Sprint 2 : tableau de bord "Aujourd'hui" (onglet), écran "Mon état"
+     (semaine/mois : recette totale, charges par rubrique, solde cumulé,
+     moyenne journalière) et historique des jours passés en lecture seule.
      Tout est stocké en localStorage. Aucun appel réseau.
   ========================================================= */
 
@@ -634,14 +717,17 @@
   /* ---------- État ---------- */
 
   var state = null;
-  var ui = { screen:"loading", modal:null, modalData:{} };
+  var ui = { screen:"loading", modal:null, modalData:{}, tab:"aujourdhui", etatPeriode:"semaine" };
 
-  function todayKey(){
-    var d = new Date();
+  function dateToKey(d){
     var y = d.getFullYear();
     var m = String(d.getMonth()+1).padStart(2,"0");
     var day = String(d.getDate()).padStart(2,"0");
     return y + "-" + m + "-" + day;
+  }
+
+  function todayKey(){
+    return dateToKey(new Date());
   }
 
   function defaultState(){
@@ -733,6 +819,62 @@
     return JOURS_FR[d.getDay()] + " " + d.getDate() + " " + MOIS_FR[d.getMonth()] + " " + d.getFullYear();
   }
 
+  function formatDateCourte(d){
+    return d.getDate() + " " + MOIS_FR[d.getMonth()];
+  }
+
+  function capitalize(s){
+    s = String(s||"");
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
+  // Lundi-dimanche de la semaine contenant d.
+  function getWeekRange(d){
+    var day = d.getDay(); // 0=dimanche..6=samedi
+    var diffToMonday = (day + 6) % 7;
+    var monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - diffToMonday);
+    var sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
+    return { startDate:monday, endDate:sunday, start:dateToKey(monday), end:dateToKey(sunday) };
+  }
+
+  function getMonthRange(d){
+    var first = new Date(d.getFullYear(), d.getMonth(), 1);
+    var last = new Date(d.getFullYear(), d.getMonth()+1, 0);
+    return { startDate:first, endDate:last, start:dateToKey(first), end:dateToKey(last) };
+  }
+
+  // Agrège les jours ayant des données dans l'intervalle [range.start, range.end] (bornes incluses).
+  function computeEtatStats(range){
+    var keys = Object.keys(state.jours).filter(function(k){
+      var j = state.jours[k];
+      var hasData = j.recette !== null || (j.charges && j.charges.length > 0);
+      return hasData && k >= range.start && k <= range.end;
+    });
+    var recetteTotale = 0, chargesTotales = 0, soldeCumule = 0;
+    var parRubrique = {};
+    keys.forEach(function(k){
+      var j = state.jours[k];
+      var r = j.recette || 0;
+      var totalCh = 0;
+      j.charges.forEach(function(c){
+        parRubrique[c.rubriqueId] = (parRubrique[c.rubriqueId] || 0) + c.montant;
+        totalCh += c.montant;
+      });
+      recetteTotale += r;
+      chargesTotales += totalCh;
+      soldeCumule += (r - totalCh);
+    });
+    var moyenne = keys.length > 0 ? soldeCumule / keys.length : 0;
+    return {
+      keys:keys,
+      recetteTotale:recetteTotale,
+      chargesTotales:chargesTotales,
+      soldeCumule:soldeCumule,
+      moyenne:moyenne,
+      parRubrique:parRubrique
+    };
+  }
+
   function uid(prefix){
     return (prefix||"id") + "_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2,7);
   }
@@ -766,9 +908,36 @@
     if(!state.config.onboardingComplete){
       renderOnboarding();
     } else {
-      renderAccueil();
+      renderMain();
     }
     renderModal();
+  }
+
+  function renderMain(){
+    if(ui.tab === "etat") renderEtat();
+    else renderAccueil();
+  }
+
+  function renderTabBarHtml(active){
+    return '' +
+      '<div class="tabbar-wrap"><div class="tabbar">' +
+        '<button class="tabbar-btn '+(active==="aujourdhui"?"active":"")+'" data-tab="aujourdhui">' +
+          '<span class="tabbar-ic">🏠</span><span>Aujourd\'hui</span></button>' +
+        '<button class="tabbar-btn '+(active==="etat"?"active":"")+'" data-tab="etat">' +
+          '<span class="tabbar-ic">📊</span><span>Mon état</span></button>' +
+      '</div></div>';
+  }
+
+  function attachTabBarEvents(){
+    document.querySelectorAll("[data-tab]").forEach(function(node){
+      node.addEventListener("click", function(){
+        var tab = node.getAttribute("data-tab");
+        if(ui.tab !== tab){
+          ui.tab = tab;
+          render();
+        }
+      });
+    });
   }
 
   /* ===================== ONBOARDING ===================== */
@@ -985,6 +1154,7 @@
         state.config.onboardingComplete = true;
         saveState();
         ui.screen = "accueil";
+        ui.tab = "aujourdhui";
         render();
       });
     }
@@ -1128,7 +1298,8 @@
         '<div class="charges-title">Charges d\'aujourd\'hui</div>' +
         chargesHtml +
       '</div>' +
-      '<div class="fab-wrap"><button class="fab" id="btn-add-charge">＋</button></div>';
+      '<div class="fab-wrap"><button class="fab" id="btn-add-charge">＋</button></div>' +
+      renderTabBarHtml("aujourdhui");
 
     app.innerHTML = html;
 
@@ -1149,6 +1320,100 @@
         renderModal();
       });
     });
+    attachTabBarEvents();
+  }
+
+  /* ===================== MON ÉTAT (semaine / mois + historique) ===================== */
+
+  function renderEtat(){
+    var periode = ui.etatPeriode === "mois" ? "mois" : "semaine";
+    var range = periode === "mois" ? getMonthRange(new Date()) : getWeekRange(new Date());
+    var stats = computeEtatStats(range);
+    var enPerte = stats.soldeCumule < 0;
+
+    var periodLabel = periode === "mois"
+      ? capitalize(MOIS_FR[new Date().getMonth()]) + " " + new Date().getFullYear()
+      : "Du " + formatDateCourte(range.startDate) + " au " + formatDateCourte(range.endDate);
+
+    var rubIds = Object.keys(stats.parRubrique).sort(function(a,b){
+      return stats.parRubrique[b] - stats.parRubrique[a];
+    });
+    var rubriqueRows = rubIds.map(function(id){
+      var r = state.config.rubriques.find(function(x){return x.id===id;});
+      var nom = r ? r.nom : "Rubrique supprimée";
+      var icone = r ? r.icone : "🏷️";
+      var couleur = r ? r.couleur : "#7f8c9a";
+      return '' +
+        '<div class="charge-row">' +
+          '<div class="rub-icon" style="background:'+couleur+'">'+icone+'</div>' +
+          '<div class="charge-info"><div class="n">'+esc(nom)+'</div></div>' +
+          '<div class="charge-amount">'+formatFCFA(stats.parRubrique[id])+'</div>' +
+        '</div>';
+    }).join("");
+
+    var rubriqueSection = '' +
+      '<div class="charges-section">' +
+        '<div class="charges-title">Charges par rubrique</div>' +
+        (rubriqueRows || '<div class="empty-state">Aucune charge enregistrée sur cette période.</div>') +
+      '</div>';
+
+    var joursKeys = stats.keys.filter(function(k){ return k !== todayKey(); }).slice().sort().reverse();
+    var joursRows = joursKeys.map(function(k){
+      var j = state.jours[k];
+      var totalCh = j.charges.reduce(function(s,c){ return s + c.montant; }, 0);
+      var solde = (j.recette||0) - totalCh;
+      var d = new Date(k + "T00:00:00");
+      return '' +
+        '<div class="day-row" data-open-jour="'+k+'">' +
+          '<div class="day-row-date">'+esc(JOURS_FR[d.getDay()]+" "+d.getDate()+" "+MOIS_FR[d.getMonth()])+'</div>' +
+          '<div class="day-row-solde '+(solde<0?"neg":"")+'">'+formatFCFA(solde)+'</div>' +
+        '</div>';
+    }).join("");
+
+    var joursSection = '' +
+      '<div class="charges-section">' +
+        '<div class="charges-title">Jours enregistrés</div>' +
+        (joursRows || '<div class="empty-state">Aucun jour archivé pour l\'instant.</div>') +
+      '</div>';
+
+    var html = '' +
+      '<div class="home-header">' +
+        '<div class="home-greet">📊 Mon état</div>' +
+      '</div>' +
+      '<div class="seg-toggle">' +
+        '<button class="seg-btn '+(periode==="semaine"?"active":"")+'" data-periode="semaine">Semaine</button>' +
+        '<button class="seg-btn '+(periode==="mois"?"active":"")+'" data-periode="mois">Mois</button>' +
+      '</div>' +
+      '<div class="etat-period-label">'+esc(periodLabel)+'</div>' +
+      '<div class="solde-card '+(enPerte?"perte":"")+'" style="margin-top:14px;">' +
+        '<p class="solde-label">Solde net cumulé</p>' +
+        '<p class="solde-value '+(enPerte?"neg":"")+'">'+formatFCFA(stats.soldeCumule)+'</p>' +
+        '<div class="solde-sub">' +
+          '<div class="solde-sub-item"><div class="k">Recette totale</div><div class="v">'+formatFCFA(stats.recetteTotale)+'</div></div>' +
+          '<div class="solde-sub-item"><div class="k">Charges totales</div><div class="v">'+formatFCFA(stats.chargesTotales)+'</div></div>' +
+          '<div class="solde-sub-item"><div class="k">Moyenne / jour</div><div class="v">'+formatFCFA(stats.moyenne)+'</div></div>' +
+        '</div>' +
+      '</div>' +
+      rubriqueSection +
+      joursSection +
+      renderTabBarHtml("etat");
+
+    app.innerHTML = html;
+
+    app.querySelectorAll("[data-periode]").forEach(function(node){
+      node.addEventListener("click", function(){
+        ui.etatPeriode = node.getAttribute("data-periode");
+        renderEtat();
+      });
+    });
+    app.querySelectorAll("[data-open-jour]").forEach(function(node){
+      node.addEventListener("click", function(){
+        ui.modal = "jour-detail";
+        ui.modalData = { key: node.getAttribute("data-open-jour") };
+        renderModal();
+      });
+    });
+    attachTabBarEvents();
   }
 
   /* ===================== MODALES ===================== */
@@ -1168,6 +1433,7 @@
     else if(ui.modal === "montant-charge") sheetHtml = modalMontantCharge();
     else if(ui.modal === "perso-modal") sheetHtml = '<div class="modal-handle"></div>' + renderPersoForm("modal");
     else if(ui.modal === "confirm-suppr-charge") sheetHtml = modalConfirmSupprCharge();
+    else if(ui.modal === "jour-detail") sheetHtml = modalJourDetail();
 
     overlay.innerHTML = '<div class="modal-sheet">' + sheetHtml + '</div>';
     document.body.appendChild(overlay);
@@ -1181,6 +1447,7 @@
     else if(ui.modal === "montant-charge") attachModalMontantChargeEvents();
     else if(ui.modal === "perso-modal") attachPersoFormEvents(function(){ renderModal(); }, true);
     else if(ui.modal === "confirm-suppr-charge") attachModalConfirmSupprChargeEvents();
+    else if(ui.modal === "jour-detail") attachModalJourDetailEvents();
   }
 
   function closeModal(){
@@ -1331,6 +1598,58 @@
       closeModal();
       renderAccueil();
     });
+  }
+
+  function modalJourDetail(){
+    var key = ui.modalData.key;
+    var j = state.jours[key];
+    if(!j){
+      return '<div class="modal-handle"></div><p class="modal-sub">Ce jour est introuvable.</p>' +
+        '<button class="btn btn-ghost" id="jour-detail-close">Fermer</button>';
+    }
+    var totalCh = j.charges.reduce(function(s,c){ return s + c.montant; }, 0);
+    var recette = j.recette;
+    var solde = (recette||0) - totalCh;
+    var enPerte = recette !== null && solde < 0;
+    var d = new Date(key + "T00:00:00");
+
+    var chargesHtml = j.charges.length === 0
+      ? '<div class="empty-state">Aucune charge ce jour-là.</div>'
+      : j.charges.map(function(c){
+          var r = state.config.rubriques.find(function(x){return x.id===c.rubriqueId;});
+          var nom = r ? r.nom : "Rubrique supprimée";
+          var icone = r ? r.icone : "🏷️";
+          var couleur = r ? r.couleur : "#7f8c9a";
+          return '' +
+            '<div class="charge-row">' +
+              '<div class="rub-icon" style="background:'+couleur+'">'+icone+'</div>' +
+              '<div class="charge-info"><div class="n">'+esc(nom)+'</div></div>' +
+              '<div class="charge-amount">'+formatFCFA(c.montant)+'</div>' +
+            '</div>';
+        }).join("");
+
+    return '' +
+      '<div class="modal-handle"></div>' +
+      '<h2 class="modal-title">'+esc(capitalize(formatDateLongue(d)))+'</h2>' +
+      '<p class="modal-sub">Jour archivé — consultation seule.</p>' +
+      '<div class="solde-card '+(enPerte?"perte":"")+'" style="margin:0 0 18px;">' +
+        '<p class="solde-label">Solde net</p>' +
+        '<p class="solde-value '+(enPerte?"neg":"")+'" style="font-size:30px;">'+(recette===null?"—":formatFCFA(solde))+'</p>' +
+        (enPerte ? '<div class="perte-banner">Jour à perte : '+formatFCFA(Math.abs(solde))+'</div>' : '') +
+        '<div class="solde-sub">' +
+          '<div class="solde-sub-item"><div class="k">Recette</div><div class="v">'+(recette===null?"—":formatFCFA(recette))+'</div></div>' +
+          '<div class="solde-sub-item"><div class="k">Charges</div><div class="v">'+formatFCFA(totalCh)+'</div></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="charges-title">Charges de ce jour</div>' +
+      chargesHtml +
+      '<div style="height:16px"></div>' +
+      '<button class="btn btn-ghost" id="jour-detail-close">Fermer</button>';
+  }
+
+  function attachModalJourDetailEvents(){
+    var close = document.getElementById("jour-detail-close");
+    if(close) close.addEventListener("click", closeModal);
   }
 
   /* ---------- Démarrage ---------- */
