@@ -349,6 +349,53 @@
     font-weight:600;
     text-transform:capitalize;
   }
+  .home-date-btn{
+    background:none;
+    border:none;
+    padding:0;
+    margin:0;
+    display:flex;
+    align-items:center;
+    gap:7px;
+    color:var(--text-dim);
+    font-size:14px;
+    font-weight:600;
+    text-transform:capitalize;
+    cursor:pointer;
+    text-align:left;
+  }
+  .home-date-btn .chip{
+    background:var(--card-2);
+    border:1px solid var(--border);
+    border-radius:999px;
+    padding:2px 9px;
+    font-size:11px;
+    font-weight:700;
+    color:var(--accent);
+    text-transform:none;
+    flex-shrink:0;
+  }
+  .home-date-today-link{
+    display:inline-block;
+    margin:4px 0 0;
+    font-size:12px;
+    font-weight:700;
+    color:var(--accent);
+    cursor:pointer;
+    text-transform:none;
+  }
+  .date-input-native{
+    width:100%;
+    background:var(--card);
+    border:2px solid var(--border);
+    border-radius:var(--radius-sm);
+    color:var(--text);
+    font-size:16px;
+    padding:14px;
+    outline:none;
+    color-scheme:dark;
+  }
+  .date-input-native:focus{border-color:var(--accent);}
   .home-greet{
     font-size:22px;
     font-weight:800;
@@ -592,6 +639,36 @@
     text-align:center;
     cursor:pointer;
   }
+  .objectif-invite-subtle{
+    margin:18px 20px 0;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    padding:2px 2px;
+    color:var(--text-faint);
+    font-size:12.5px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .objectif-invite-subtle .oi-jours{
+    color:var(--text-faint);
+    font-weight:600;
+  }
+  .objectif-invite-subtle .oi-arrow{
+    color:var(--text-dim);
+    font-weight:800;
+  }
+  .disponible-line{
+    margin-top:10px;
+    padding-top:10px;
+    border-top:1px dashed var(--border);
+    font-size:13px;
+    font-weight:600;
+    color:var(--text-dim);
+    text-align:center;
+  }
+  .disponible-line b{ color:var(--text); font-weight:800; }
   .scenario-card{
     display:flex;
     flex-direction:row;
@@ -883,7 +960,8 @@
   var MODELES_OBJECTIF = [
     { id:"vehicule", nom:"Véhicule",         emoji:"🏍️", desc:"Moto, apport véhicule",       sousTypes:["Moto","Apport véhicule"] },
     { id:"famille",  nom:"Famille",          emoji:"👨‍👩‍👧", desc:"Mariage, scolarité, santé",  sousTypes:["Mariage","Scolarité","Santé"] },
-    { id:"filet",    nom:"Filet de sécurité",emoji:"🛟", desc:"Jour sans travail, panne, contrôle", sousTypes:["Jour sans travail","Panne","Contrôle"] }
+    { id:"filet",    nom:"Filet de sécurité",emoji:"🛟", desc:"Jour sans travail, panne, contrôle", sousTypes:["Jour sans travail","Panne","Contrôle"] },
+    { id:"epargne_libre", nom:"Épargne libre", emoji:"💰", desc:"Juste mettre de côté, sans montant précis", sousTypes:[] }
   ];
 
   var POURCENTAGES_SCENARIO = [10,20,30];
@@ -894,7 +972,49 @@
   /* ---------- État ---------- */
 
   var state = null;
-  var ui = { screen:"loading", modal:null, modalData:{}, tab:"aujourdhui", etatPeriode:"semaine", objStep:1, objData:{}, objEditing:false, overlay:null, locked:false, lockPin:"", partagerPeriode:"jour" };
+  var ui = { screen:"loading", modal:null, modalData:{}, tab:"aujourdhui", etatPeriode:"semaine", objStep:1, objData:{}, objEditing:false, overlay:null, locked:false, lockPin:"", partagerPeriode:"jour", accueilDate:null };
+
+  // ---------- Sprint 5A : bouton retour du téléphone (navigation, pas de sortie de l'app) ----------
+  // Sans ceci, le bouton/geste "retour" du téléphone quitte directement l'application dès qu'on
+  // est dans un écran secondaire (Réglages, un modal, un onglet autre qu'Aujourd'hui...). On
+  // n'essaie pas de tout modéliser dans l'historique du navigateur : à chaque rendu, on regarde
+  // si l'écran actuel est "profond" et on arme/désarme une seule entrée d'historique en
+  // conséquence. Au retour physique, on referme la couche la plus profonde ouverte (modal, puis
+  // écran secondaire, puis étape d'un assistant, puis onglet) — jamais plus d'un niveau à la fois.
+  var historyArmed = false;
+  var suppressNextPopstate = false;
+
+  function isUiDeep(){
+    if(!state || !state.config || !state.config.onboardingComplete) return false; // pas pendant la configuration
+    if(ui.locked) return false; // pas sur l'écran de verrouillage
+    if(ui.modal) return true;
+    if(ui.overlay) return true;
+    if(ui.tab === "objectif" && !(state.objectif && state.objectif.actif) && (ui.objStep||1) > 1) return true;
+    if(ui.tab && ui.tab !== "aujourdhui") return true;
+    return false;
+  }
+
+  function syncHistoryForBack(){
+    if(typeof history === "undefined" || !history.pushState) return;
+    var deep = isUiDeep();
+    if(deep && !historyArmed){
+      historyArmed = true;
+      history.pushState({ trepor:true }, "", location.href);
+    } else if(!deep && historyArmed){
+      historyArmed = false;
+      suppressNextPopstate = true;
+      history.back();
+    }
+  }
+
+  function handleBackNavigation(){
+    if(ui.modal){ ui.modal = null; ui.modalData = {}; render(); return; }
+    if(ui.overlay){ ui.overlay = null; render(); return; }
+    if(ui.tab === "objectif" && !(state.objectif && state.objectif.actif) && (ui.objStep||1) > 1){
+      ui.objStep -= 1; render(); return;
+    }
+    if(ui.tab && ui.tab !== "aujourdhui"){ ui.tab = "aujourdhui"; render(); return; }
+  }
 
   function dateToKey(d){
     var y = d.getFullYear();
@@ -972,8 +1092,36 @@
   function ensureJour(key){
     if(!state.jours[key]){
       state.jours[key] = { date:key, origine:"trepor", recette:null, charges:[] };
+      if(key !== todayKey()) state.jours[key].saisiApresCoup = true; // Sprint 5A : saisie rétroactive (F1)
+      seedDioulatchaiCharge(state.jours[key]);
+      // Le dioulatchai auto-ajouté est une vraie charge, pas juste un brouillon d'affichage :
+      // on la sauvegarde tout de suite pour ne pas la perdre si l'appli se ferme avant toute
+      // autre saisie du jour.
+      if(state.jours[key].charges.length > 0) saveState();
     }
     return state.jours[key];
+  }
+
+  // Sprint 5A : si on est locataire avec un dioulatchai renseigné, la charge du jour est déjà là
+  // à l'ouverture au lieu de devoir être ajoutée à la main comme les autres charges.
+  function seedDioulatchaiCharge(jour){
+    if(state.config.statutVehicule !== "locataire") return;
+    if(!state.config.dioulatchai) return;
+    var rub = state.config.rubriques.find(function(r){ return r.id === "dioulatchai"; });
+    if(!rub || !rub.actif) return;
+    jour.charges.push({ id:uid("charge"), rubriqueId:"dioulatchai", montant:state.config.dioulatchai, ts:Date.now() });
+  }
+
+  // Sprint 5A : quel jour est actuellement en cours de saisie sur l'accueil — aujourd'hui par
+  // défaut, ou un jour passé choisi via le sélecteur de date (remarque terrain : jour oublié).
+  function currentEntryKey(){
+    return ui.accueilDate || todayKey();
+  }
+
+  function entryDateLabel(){
+    var key = currentEntryKey();
+    if(key === todayKey()) return "aujourd'hui";
+    return "le " + formatDateLongue(new Date(key + "T00:00:00"));
   }
 
   /* ---------- Utilitaires ---------- */
@@ -1120,7 +1268,8 @@
     var info = computeMoyenneHebdoRecente();
     return POURCENTAGES_SCENARIO.map(function(pct){
       var epargneHebdo = info.moyenne > 0 ? (info.moyenne * pct / 100) : 0;
-      var semaines = epargneHebdo > 0 ? Math.ceil(montantCible / epargneHebdo) : null;
+      // Épargne libre (F7, Sprint 5A) : sans montant cible, pas de durée à calculer.
+      var semaines = (montantCible > 0 && epargneHebdo > 0) ? Math.ceil(montantCible / epargneHebdo) : null;
       return { pourcentage:pct, epargneHebdo:epargneHebdo, semaines:semaines };
     });
   }
@@ -1191,6 +1340,7 @@
       renderMain();
     }
     renderModal();
+    syncHistoryForBack();
   }
 
   function renderMain(){
@@ -1525,12 +1675,18 @@
   /* ===================== ACCUEIL ===================== */
 
   function renderAccueil(){
-    var key = todayKey();
+    var key = currentEntryKey();
+    var estAujourdhui = key === todayKey();
     var jour = ensureJour(key);
     var recette = jour.recette;
     var totalCharges = jour.charges.reduce(function(s,c){ return s + c.montant; }, 0);
     var solde = (recette||0) - totalCharges;
     var enPerte = recette !== null && solde < 0;
+
+    var objectifActif = state.objectif && state.objectif.actif ? state.objectif : null;
+    var epargneJour = (objectifActif && objectifActif.pourcentage && solde > 0)
+      ? Math.round(solde * objectifActif.pourcentage / 100) : 0;
+    var disponible = solde - epargneJour;
 
     var seg = SEGMENTS.find(function(s){return s.id===state.config.segment;});
 
@@ -1538,29 +1694,32 @@
     if(recette === null){
       soldeHtml = '' +
         '<div class="solde-card">' +
-          '<p class="solde-label">Solde net du jour</p>' +
-          '<p class="solde-value" style="color:var(--text-dim); font-size:22px;">Saisissez d\'abord votre recette</p>' +
+          '<p class="solde-label">Solde net '+(estAujourdhui?"du jour":"— "+esc(formatDateCourte(new Date(key+"T00:00:00"))))+'</p>' +
+          '<p class="solde-value" style="color:var(--text-dim); font-size:22px;">Saisissez d\'abord la recette</p>' +
         '</div>';
     } else {
       soldeHtml = '' +
         '<div class="solde-card '+(enPerte?"perte":"")+'">' +
-          '<p class="solde-label">Solde net du jour</p>' +
+          '<p class="solde-label">Solde net '+(estAujourdhui?"du jour":"— "+esc(formatDateCourte(new Date(key+"T00:00:00"))))+'</p>' +
           '<p class="solde-value '+(enPerte?"neg":"")+'">'+formatFCFA(solde)+'</p>' +
           (enPerte ? '<div class="perte-banner">Jour à perte : '+formatFCFA(Math.abs(solde))+'</div>' : '') +
           '<div class="solde-sub">' +
             '<div class="solde-sub-item"><div class="k">Recette</div><div class="v">'+formatFCFA(recette)+'</div></div>' +
             '<div class="solde-sub-item"><div class="k">Charges</div><div class="v">'+formatFCFA(totalCharges)+'</div></div>' +
           '</div>' +
+          (epargneJour > 0
+            ? '<div class="disponible-line">Disponible aujourd\'hui : <b>'+formatFCFA(disponible)+'</b><br>('+formatFCFA(epargneJour)+' mis de côté pour « '+esc(objectifActif.nom)+' »)</div>'
+            : '') +
         '</div>';
     }
 
     var recetteBtnHtml = recette === null
-      ? '<div class="recette-btn" id="btn-recette"><span class="ic">💰</span><div class="lbl"><div class="t1">Recette du jour</div><div class="t2">Montant encaissé aujourd\'hui</div></div></div>'
+      ? '<div class="recette-btn" id="btn-recette"><span class="ic">💰</span><div class="lbl"><div class="t1">Recette du jour</div><div class="t2">Montant encaissé '+entryDateLabel()+'</div></div></div>'
       : '<div class="recette-btn set" id="btn-recette"><span class="ic">💰</span><div class="lbl"><div class="t1">Recette du jour : '+formatFCFA(recette)+'</div><div class="t2">Toucher pour modifier</div></div></div>';
 
     var chargesHtml;
     if(jour.charges.length === 0){
-      chargesHtml = '<div class="empty-state">Aucune charge enregistrée aujourd\'hui.</div>';
+      chargesHtml = '<div class="empty-state">Aucune charge enregistrée '+entryDateLabel()+'.</div>';
     } else {
       chargesHtml = jour.charges.slice().reverse().map(function(c){
         var r = state.config.rubriques.find(function(x){return x.id===c.rubriqueId;});
@@ -1577,25 +1736,35 @@
       }).join("");
     }
 
-    var objectifHtml = renderObjectifDashboardCard();
+    // L'objectif actif reste visible en haut (jauge utile au quotidien, F5) ; l'invite à en créer
+    // un, elle, est reléguée plus bas et allégée — c'est un service optionnel, pas une étape du
+    // jour (remarque terrain : l'ancien emplacement le faisait passer pour obligatoire).
+    var objectifActifHtml = objectifActif ? renderObjectifDashboardCard() : "";
+    var objectifInviteHtml = objectifActif ? "" : renderObjectifInviteSubtle();
+
+    var dateLabelHtml = estAujourdhui
+      ? esc(capitalize(formatDateLongue(new Date())))
+      : '<span class="chip">jour choisi</span> ' + esc(capitalize(formatDateLongue(new Date(key+"T00:00:00"))));
 
     var html = '' +
       '<div class="home-header">' +
         '<div class="home-header-row">' +
           '<div>' +
-            '<div class="home-date">'+esc(formatDateLongue(new Date()))+'</div>' +
+            '<button class="home-date-btn" id="btn-date">'+dateLabelHtml+' ✎</button>' +
+            (estAujourdhui ? '' : '<div class="home-date-today-link" id="btn-date-today">↺ Revenir à aujourd\'hui</div>') +
             '<div class="home-greet">'+(seg?seg.emoji:"👋")+' Faire le point</div>' +
           '</div>' +
           '<button class="icon-btn" id="btn-reglages" aria-label="Réglages">⚙️</button>' +
         '</div>' +
       '</div>' +
       soldeHtml +
-      objectifHtml +
+      objectifActifHtml +
       recetteBtnHtml +
       '<div class="charges-section">' +
-        '<div class="charges-title">Charges d\'aujourd\'hui</div>' +
+        '<div class="charges-title">Charges '+(estAujourdhui?"d\'aujourd\'hui":"de ce jour")+'</div>' +
         chargesHtml +
       '</div>' +
+      objectifInviteHtml +
       '<div class="fab-wrap"><button class="fab" id="btn-add-charge">＋</button></div>' +
       renderTabBarHtml("aujourdhui");
 
@@ -1623,36 +1792,71 @@
       ui.overlay = "reglages";
       render();
     });
-    var objCard = document.getElementById("objectif-dashboard-card");
-    if(objCard) objCard.addEventListener("click", function(){
+    var btnDate = document.getElementById("btn-date");
+    if(btnDate) btnDate.addEventListener("click", function(){
+      ui.modal = "changer-date";
+      ui.modalData = { date: key };
+      renderModal();
+    });
+    var btnDateToday = document.getElementById("btn-date-today");
+    if(btnDateToday) btnDateToday.addEventListener("click", function(){
+      ui.accueilDate = null;
+      render();
+    });
+    var objCardActif = document.getElementById("objectif-dashboard-card");
+    if(objCardActif) objCardActif.addEventListener("click", function(){
+      ui.tab = "objectif";
+      render();
+    });
+    var objInvite = document.getElementById("objectif-invite-subtle");
+    if(objInvite) objInvite.addEventListener("click", function(){
       ui.tab = "objectif";
       render();
     });
     attachTabBarEvents();
   }
 
-  // Jauge de progression de l'objectif actif (F5), affichée sur le tableau
-  // de bord "Aujourd'hui". Si aucun objectif n'est défini, une invite
-  // discrète propose d'en créer un.
+  // Jauge de progression de l'objectif actif (F5), affichée en haut du tableau de bord —
+  // information utile au quotidien une fois l'objectif créé.
   function renderObjectifDashboardCard(){
-    if(state.objectif && state.objectif.actif){
-      var obj = state.objectif;
-      var epargne = computeEpargneObjectif();
-      var pct = obj.montantCible > 0 ? Math.min(1, epargne / obj.montantCible) : 0;
-      var pctAff = Math.round(pct * 100);
-      var modele = MODELES_OBJECTIF.find(function(m){ return m.id === obj.modele; });
+    var obj = state.objectif;
+    var epargne = computeEpargneObjectif();
+    var modele = MODELES_OBJECTIF.find(function(m){ return m.id === obj.modele; });
+    if(!obj.montantCible){
+      // Épargne libre (Sprint 5A) : pas de cible, donc pas de jauge en %.
       return '' +
         '<div class="objectif-card" id="objectif-dashboard-card">' +
           '<div class="objectif-card-head">' +
-            '<span>'+(modele?modele.emoji+' ':'🎯 ')+esc(obj.nom)+'</span>' +
-            '<span>'+pctAff+'%</span>' +
+            '<span>'+(modele?modele.emoji+' ':'💰 ')+esc(obj.nom)+'</span>' +
           '</div>' +
-          '<div class="gauge-track"><div class="gauge-fill" style="width:'+pctAff+'%"></div></div>' +
-          '<div class="objectif-card-sub">'+formatFCFA(epargne)+' sur '+formatFCFA(obj.montantCible)+'</div>' +
+          '<div class="objectif-card-sub">'+formatFCFA(epargne)+' mis de côté</div>' +
         '</div>';
     }
+    var pct = Math.min(1, epargne / obj.montantCible);
+    var pctAff = Math.round(pct * 100);
     return '' +
-      '<div class="objectif-prompt" id="objectif-dashboard-card">🎯 Définissez votre objectif</div>';
+      '<div class="objectif-card" id="objectif-dashboard-card">' +
+        '<div class="objectif-card-head">' +
+          '<span>'+(modele?modele.emoji+' ':'🎯 ')+esc(obj.nom)+'</span>' +
+          '<span>'+pctAff+'%</span>' +
+        '</div>' +
+        '<div class="gauge-track"><div class="gauge-fill" style="width:'+pctAff+'%"></div></div>' +
+        '<div class="objectif-card-sub">'+formatFCFA(epargne)+' sur '+formatFCFA(obj.montantCible)+'</div>' +
+      '</div>';
+  }
+
+  // Invite discrète à créer un objectif — pas de cadre plein ni de position en haut de l'accueil :
+  // c'est un service optionnel (F7), il ne doit pas ressembler à une étape obligatoire du jour.
+  // Reconnaît aussi discrètement la régularité (remarque terrain, validée) sans rien conditionner.
+  function renderObjectifInviteSubtle(){
+    var nbJours = Object.keys(state.jours).filter(function(k){ return jourADesDonnees(state.jours[k]); }).length;
+    var noteJours = nbJours >= 5 ? '<span class="oi-jours">'+nbJours+' jours enregistrés</span>' : '<span></span>';
+    return '' +
+      '<div class="objectif-invite-subtle" id="objectif-invite-subtle">' +
+        '<span>🎯 Définir un objectif (optionnel)</span>' +
+        noteJours +
+        '<span class="oi-arrow">›</span>' +
+      '</div>';
   }
 
   /* ===================== MON ÉTAT (semaine / mois + historique) ===================== */
@@ -1697,7 +1901,7 @@
       var d = new Date(k + "T00:00:00");
       return '' +
         '<div class="day-row" data-open-jour="'+k+'">' +
-          '<div class="day-row-date">'+esc(JOURS_FR[d.getDay()]+" "+d.getDate()+" "+MOIS_FR[d.getMonth()])+'</div>' +
+          '<div class="day-row-date">'+esc(JOURS_FR[d.getDay()]+" "+d.getDate()+" "+MOIS_FR[d.getMonth()])+(j.saisiApresCoup?' <span style="color:var(--text-faint); font-weight:500; text-transform:none;">· saisi plus tard</span>':'')+'</div>' +
           '<div class="day-row-solde '+(solde<0?"neg":"")+'">'+formatFCFA(solde)+'</div>' +
         '</div>';
     }).join("");
@@ -1788,14 +1992,34 @@
   function renderObjectifActif(){
     var obj = state.objectif;
     var epargne = computeEpargneObjectif();
-    var pct = obj.montantCible > 0 ? Math.min(1, epargne / obj.montantCible) : 0;
-    var pctAff = Math.round(pct * 100);
-    var restant = Math.max(0, obj.montantCible - epargne);
+    var modele = MODELES_OBJECTIF.find(function(m){ return m.id === obj.modele; });
     var info = computeMoyenneHebdoRecente();
     var epargneHebdo = (obj.pourcentage && info.moyenne > 0) ? (info.moyenne * obj.pourcentage / 100) : 0;
+
+    if(!obj.montantCible){
+      // Épargne libre (Sprint 5A) : pas de cible, donc ni jauge en %, ni délai à afficher.
+      return '' +
+        '<div class="solde-card" style="margin:14px 20px 0;">' +
+          '<p class="solde-label">'+(modele?modele.emoji+' ':'💰 ')+esc(obj.nom)+'</p>' +
+          '<p class="solde-value" style="color:var(--text); font-size:30px;">'+formatFCFA(epargne)+
+            ' <span style="font-size:15px; color:var(--text-dim); font-weight:600;">mis de côté</span></p>' +
+          (obj.pourcentage
+            ? '<p style="color:var(--text-dim); font-size:13px; margin-top:10px;">Rythme : '+obj.pourcentage+'% du solde net chaque semaine'+(epargneHebdo>0?' · environ '+formatFCFA(epargneHebdo)+' / semaine':'')+'</p>'
+            : '') +
+        '</div>' +
+        '<div class="charges-section">' +
+          '<div class="btn-row">' +
+            '<button class="btn btn-ghost btn-sm" id="obj-changer-rythme">Changer de rythme</button>' +
+            '<button class="btn btn-danger-ghost btn-sm" id="obj-supprimer">Supprimer</button>' +
+          '</div>' +
+        '</div>';
+    }
+
+    var pct = Math.min(1, epargne / obj.montantCible);
+    var pctAff = Math.round(pct * 100);
+    var restant = Math.max(0, obj.montantCible - epargne);
     var semainesRestantes = epargneHebdo > 0 ? Math.ceil(restant / epargneHebdo) : null;
-    var modele = MODELES_OBJECTIF.find(function(m){ return m.id === obj.modele; });
-    var atteint = epargne >= obj.montantCible && obj.montantCible > 0;
+    var atteint = epargne >= obj.montantCible;
 
     return '' +
       '<div class="solde-card" style="margin:14px 20px 0;">' +
@@ -1843,7 +2067,7 @@
     var sousTypesHtml = "";
     if(ui.objData.modele){
       var modele = MODELES_OBJECTIF.find(function(m){ return m.id === ui.objData.modele; });
-      if(modele){
+      if(modele && modele.sousTypes && modele.sousTypes.length > 0){
         sousTypesHtml = '' +
           '<p class="field-label">Précisez (optionnel)</p>' +
           '<div class="emoji-grid">' +
@@ -1856,9 +2080,9 @@
 
     return '' +
       '<p class="onb-eyebrow" style="margin-top:16px;">Nouvel objectif</p>' +
-      '<h1 class="onb-title" style="font-size:20px;">Quel est votre objectif ?</h1>' +
-      '<p class="onb-sub">Choisissez un modèle pour démarrer.</p>' +
-      '<div class="onb-grid" style="grid-template-columns:repeat(3,1fr);">'+cards+'</div>' +
+      '<h1 class="onb-title" style="font-size:20px;">Vous mettez de côté pour quoi ?</h1>' +
+      '<p class="onb-sub">Choisissez ce qui vous ressemble le plus.</p>' +
+      '<div class="onb-grid" style="grid-template-columns:repeat(2,1fr);">'+cards+'</div>' +
       sousTypesHtml +
       '<div style="height:10px;"></div>' +
       '<button class="btn btn-primary" id="obj1-next" '+(ui.objData.modele?"":"disabled")+'>Continuer</button>';
@@ -1866,34 +2090,38 @@
 
   function objStep2(){
     var modele = MODELES_OBJECTIF.find(function(m){ return m.id === ui.objData.modele; });
+    var sansCible = ui.objData.modele === "epargne_libre";
     if(!ui.objData.nom){
       ui.objData.nom = (modele ? modele.nom : "Mon objectif") + (ui.objData.sousType ? " — "+ui.objData.sousType : "");
     }
+    var peutContinuer = sansCible || !!ui.objData.montantCible;
     return '' +
       '<p class="onb-eyebrow" style="margin-top:16px;">Nouvel objectif</p>' +
-      '<h1 class="onb-title" style="font-size:20px;">Donnez les détails</h1>' +
-      '<p class="field-label">Nom de l\'objectif</p>' +
+      '<h1 class="onb-title" style="font-size:20px;">Encore deux ou trois choses</h1>' +
+      '<p class="field-label">Comment on l\'appelle ?</p>' +
       '<input type="text" class="text-input" id="obj-nom" value="'+esc(ui.objData.nom||"")+'" maxlength="40">' +
-      '<p class="field-label" style="margin-top:14px;">Montant cible</p>' +
+      '<p class="field-label" style="margin-top:14px;">Montant visé'+(sansCible?" (optionnel)":"")+'</p>' +
       '<div class="amount-input-wrap">' +
         '<input type="text" inputmode="numeric" id="obj-montant" placeholder="0" value="'+esc(spacedDigits(ui.objData.montantCible))+'">' +
         '<span class="suffix">F</span>' +
       '</div>' +
+      (sansCible ? '<p class="field-help">Laissez à 0 si vous voulez juste mettre de côté, sans montant précis en tête.</p>' : '') +
       '<div style="height:10px;"></div>' +
       '<div class="btn-row">' +
         '<button class="btn btn-ghost" id="obj2-back">Retour</button>' +
-        '<button class="btn btn-primary" id="obj2-next" '+(ui.objData.montantCible?"":"disabled")+'>Voir les scénarios</button>' +
+        '<button class="btn btn-primary" id="obj2-next" '+(peutContinuer?"":"disabled")+'>Voir mes options</button>' +
       '</div>';
   }
 
   function objStep3(){
+    var sansCible = ui.objData.modele === "epargne_libre" && !ui.objData.montantCible;
     var montantCible = ui.objData.montantCible || 0;
     var scenarios = computeScenarios(montantCible);
     var info = computeMoyenneHebdoRecente();
 
     var note = info.nbSemaines === 0
-      ? '<div class="warn-msg">Pas encore de recette saisie : les scénarios s\'affineront dès vos premiers jours enregistrés.</div>'
-      : '<p class="field-help">Basé sur votre solde net moyen des '+info.nbSemaines+' dernière'+(info.nbSemaines>1?"s":"")+' semaine'+(info.nbSemaines>1?"s":"")+' saisie'+(info.nbSemaines>1?"s":"")+' : environ '+formatFCFA(info.moyenne)+' / semaine.</p>';
+      ? '<div class="warn-msg">Pas encore assez d\'infos. Dès que vous aurez enregistré quelques jours, on pourra vous proposer des chiffres.</div>'
+      : '<p class="field-help">D\'après ce que vous gagnez ces derniers temps (vos '+info.nbSemaines+' dernière'+(info.nbSemaines>1?"s":"")+' semaine'+(info.nbSemaines>1?"s":"")+') : à peu près '+formatFCFA(info.moyenne)+' par semaine.</p>';
 
     var cards = scenarios.map(function(s){
       var sel = ui.objData.pourcentageChoisi === s.pourcentage ? "selected" : "";
@@ -1903,13 +2131,13 @@
             '<div class="sc-name">'+(NOMS_SCENARIO[s.pourcentage]||"")+' · '+s.pourcentage+'%</div>' +
             '<div class="sc-sub">'+(s.epargneHebdo>0 ? formatFCFA(s.epargneHebdo)+" / semaine" : "à déterminer")+'</div>' +
           '</div>' +
-          '<div class="sc-duree">'+formatDureeSemaines(s.semaines)+'</div>' +
+          '<div class="sc-duree">'+(sansCible ? "Libre" : formatDureeSemaines(s.semaines))+'</div>' +
         '</div>';
     }).join("");
 
     return '' +
-      '<p class="onb-eyebrow" style="margin-top:16px;">3 façons d\'y arriver</p>' +
-      '<h1 class="onb-title" style="font-size:20px;">Choisissez votre rythme</h1>' +
+      '<p class="onb-eyebrow" style="margin-top:16px;">Comment y arriver</p>' +
+      '<h1 class="onb-title" style="font-size:20px;">À quel rythme ?</h1>' +
       note +
       '<div class="choice-row" style="margin-top:14px;">'+cards+'</div>' +
       '<div class="btn-row">' +
@@ -1969,7 +2197,7 @@
       var next2 = document.getElementById("obj2-next");
       attachAmountInput(montantInput, function(value){
         ui.objData.montantCible = value;
-        if(next2) next2.disabled = !value;
+        if(next2) next2.disabled = !value && ui.objData.modele !== "epargne_libre";
       });
       var back2 = document.getElementById("obj2-back");
       if(back2) back2.addEventListener("click", function(){ ui.objStep = 1; renderObjectif(); });
@@ -2008,7 +2236,7 @@
           modele: ui.objData.modele,
           sousType: ui.objData.sousType || null,
           nom: (ui.objData.nom||"").trim() || "Mon objectif",
-          montantCible: ui.objData.montantCible,
+          montantCible: ui.objData.montantCible || 0,
           dateCreation: enCours ? enCours.dateCreation : todayKey(),
           pourcentage: ui.objData.pourcentageChoisi,
           actif: true
@@ -2040,6 +2268,7 @@
     else if(ui.modal === "montant-charge") sheetHtml = modalMontantCharge();
     else if(ui.modal === "perso-modal") sheetHtml = '<div class="modal-handle"></div>' + renderPersoForm("modal");
     else if(ui.modal === "confirm-suppr-charge") sheetHtml = modalConfirmSupprCharge();
+    else if(ui.modal === "changer-date") sheetHtml = modalChangerDate();
     else if(ui.modal === "jour-detail") sheetHtml = modalJourDetail();
     else if(ui.modal === "confirm-suppr-objectif") sheetHtml = modalConfirmSupprObjectif();
     else if(ui.modal === "confirm-restaurer") sheetHtml = modalConfirmRestaurer();
@@ -2062,6 +2291,7 @@
     else if(ui.modal === "montant-charge") attachModalMontantChargeEvents();
     else if(ui.modal === "perso-modal") attachPersoFormEvents(function(){ renderModal(); }, true);
     else if(ui.modal === "confirm-suppr-charge") attachModalConfirmSupprChargeEvents();
+    else if(ui.modal === "changer-date") attachModalChangerDateEvents();
     else if(ui.modal === "jour-detail") attachModalJourDetailEvents();
     else if(ui.modal === "confirm-suppr-objectif") attachModalConfirmSupprObjectifEvents();
     else if(ui.modal === "confirm-restaurer") attachModalConfirmRestaurerEvents();
@@ -2083,7 +2313,7 @@
     return '' +
       '<div class="modal-handle"></div>' +
       '<h2 class="modal-title">Recette du jour</h2>' +
-      '<p class="modal-sub">Le montant total encaissé aujourd\'hui.</p>' +
+      '<p class="modal-sub">Le montant total encaissé '+entryDateLabel()+'.</p>' +
       '<div class="amount-input-wrap">' +
         '<input type="text" inputmode="numeric" id="modal-recette-input" placeholder="0" value="'+esc(spacedDigits(ui.modalData.montant))+'" autofocus>' +
         '<span class="suffix">F</span>' +
@@ -2102,7 +2332,7 @@
     document.getElementById("modal-recette-cancel").addEventListener("click", closeModal);
     document.getElementById("modal-recette-save").addEventListener("click", function(){
       var montant = parseAmountInput(input ? input.value : ui.modalData.montant);
-      var jour = ensureJour(todayKey());
+      var jour = ensureJour(currentEntryKey());
       jour.recette = montant;
       saveState();
       closeModal();
@@ -2126,9 +2356,10 @@
         '<div class="name">Nouvelle rubrique</div>' +
       '</div>';
 
+    var suffixeDate = currentEntryKey() === todayKey() ? "" : " — "+entryDateLabel();
     var emptyMsg = actives.length === 0
       ? '<p class="modal-sub">Aucune rubrique active. Créez-en une pour commencer.</p>'
-      : '<p class="modal-sub">Choisissez la rubrique de la charge.</p>';
+      : '<p class="modal-sub">Choisissez la rubrique de la charge'+esc(suffixeDate)+'.</p>';
 
     return '' +
       '<div class="modal-handle"></div>' +
@@ -2188,7 +2419,7 @@
     if(save) save.addEventListener("click", function(){
       var montant = parseAmountInput(input ? input.value : ui.modalData.montant);
       var rubriqueId = ui.modalData.rubriqueId;
-      var jour = ensureJour(todayKey());
+      var jour = ensureJour(currentEntryKey());
       jour.charges.push({ id:uid("charge"), rubriqueId:rubriqueId, montant:montant, ts:Date.now() });
       state.dernierMontant[rubriqueId] = montant;
       saveState();
@@ -2214,10 +2445,40 @@
   function attachModalConfirmSupprChargeEvents(){
     document.getElementById("confirm-suppr-non").addEventListener("click", closeModal);
     document.getElementById("confirm-suppr-oui").addEventListener("click", function(){
-      var jour = ensureJour(todayKey());
+      var jour = ensureJour(currentEntryKey());
       var chargeId = ui.modalData.chargeId;
       jour.charges = jour.charges.filter(function(c){ return c.id !== chargeId; });
       saveState();
+      closeModal();
+      renderAccueil();
+    });
+  }
+
+  // Sprint 5A : rattraper un jour oublié — on choisit une date passée, jamais future, et la
+  // saisie de l'accueil (recette, charges) bascule sur ce jour-là jusqu'à ce qu'on revienne
+  // explicitement à aujourd'hui.
+  function modalChangerDate(){
+    var val = ui.modalData.date || todayKey();
+    return '' +
+      '<div class="modal-handle"></div>' +
+      '<h2 class="modal-title">Changer de jour</h2>' +
+      '<p class="modal-sub">Pour enregistrer un jour que vous avez oublié. On ne peut pas choisir une date future.</p>' +
+      '<input type="date" class="date-input-native" id="modal-date-input" value="'+esc(val)+'" max="'+todayKey()+'">' +
+      '<div style="height:18px"></div>' +
+      '<div class="btn-row">' +
+        '<button class="btn btn-ghost" id="modal-date-cancel">Annuler</button>' +
+        '<button class="btn btn-primary" id="modal-date-save">Valider</button>' +
+      '</div>';
+  }
+
+  function attachModalChangerDateEvents(){
+    var input = document.getElementById("modal-date-input");
+    document.getElementById("modal-date-cancel").addEventListener("click", closeModal);
+    document.getElementById("modal-date-save").addEventListener("click", function(){
+      var val = input ? input.value : "";
+      if(!val){ showToast("Choisissez une date."); return; }
+      if(val > todayKey()){ showToast("Impossible de choisir une date future."); return; }
+      ui.accueilDate = (val === todayKey()) ? null : val;
       closeModal();
       renderAccueil();
     });
@@ -2254,7 +2515,7 @@
     return '' +
       '<div class="modal-handle"></div>' +
       '<h2 class="modal-title">'+esc(capitalize(formatDateLongue(d)))+'</h2>' +
-      '<p class="modal-sub">Jour archivé — consultation seule.</p>' +
+      '<p class="modal-sub">Jour archivé — consultation seule.'+(j.saisiApresCoup?' <span style="color:var(--text-faint);">🕒 Saisi plus tard.</span>':'')+'</p>' +
       '<div class="solde-card '+(enPerte?"perte":"")+'" style="margin:0 0 18px;">' +
         '<p class="solde-label">Solde net</p>' +
         '<p class="solde-value '+(enPerte?"neg":"")+'" style="font-size:30px;">'+(recette===null?"—":formatFCFA(solde))+'</p>' +
@@ -3200,6 +3461,19 @@
 
 
   /* ---------- Démarrage ---------- */
+
+  // Sprint 5A : le bouton/geste "retour" du téléphone doit naviguer dans l'appli, pas la fermer.
+  window.addEventListener("popstate", function(){
+    if(suppressNextPopstate){ suppressNextPopstate = false; return; }
+    historyArmed = false;
+    handleBackNavigation();
+  });
+  // Beaucoup d'actions (ouvrir/fermer un modal, changer d'onglet, avancer dans l'assistant
+  // objectif...) passent par un rendu partiel (renderModal, renderObjectif...) plutôt que par
+  // render() au complet. Plutôt que d'aller ajouter syncHistoryForBack() à chaque endroit, on la
+  // relance après chaque clic (une fois les gestionnaires synchrones terminés) : elle regarde
+  // simplement l'état actuel de l'écran et arme/désarme l'historique en conséquence.
+  document.addEventListener("click", function(){ setTimeout(syncHistoryForBack, 0); }, true);
 
   state = loadState();
   ui.locked = !!(state.config.pinActif && state.config.pinCode);
