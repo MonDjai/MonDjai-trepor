@@ -55,11 +55,17 @@
   input{font-family:inherit;}
 
   /* ---------- Écrans d'onboarding ---------- */
+  /* Sprint 6B : .onb sert aussi d'écran plein (Réglages, À propos, verrouillage PIN, création
+     d'objectif) — aucun de ces écrans n'affiche la barre d'onglets. #app réserve pourtant
+     120px + la zone de sécurité en bas (calc(120px + var(--safe-bottom))) pour cette barre,
+     ce qui laissait un vide mort en dessous de ces écrans. La marge négative reprend
+     exactement cet espace réservé pour ces écrans-là, sans toucher aux écrans avec onglets. */
   .onb{
     flex:1;
     display:flex;
     flex-direction:column;
-    padding:calc(28px + var(--safe-top)) 22px 24px;
+    padding:calc(28px + var(--safe-top)) 22px calc(24px + var(--safe-bottom));
+    margin-bottom:calc(-120px - var(--safe-bottom));
   }
   .onb-steps{
     display:flex;
@@ -96,29 +102,30 @@
   .onb-grid{
     display:grid;
     grid-template-columns:1fr 1fr;
-    gap:12px;
+    gap:16px;
     margin-bottom:18px;
   }
   .choice-card{
     background:var(--card);
     border:2px solid var(--border);
     border-radius:var(--radius);
-    padding:20px 12px;
+    padding:30px 14px;
     display:flex;
     flex-direction:column;
     align-items:center;
-    gap:10px;
+    gap:14px;
     text-align:center;
     color:var(--text);
     font-size:15px;
     font-weight:600;
     cursor:pointer;
   }
-  .choice-card .emoji{font-size:48px;}
+  .choice-card .emoji{font-size:60px;}
   .choice-card.selected{
     border-color:var(--accent);
     background:linear-gradient(180deg, rgba(245,166,35,.16), rgba(245,166,35,.06));
   }
+  .choice-card.disabled{opacity:.45; cursor:not-allowed;}
   .choice-row{
     display:flex;
     flex-direction:column;
@@ -130,8 +137,29 @@
     justify-content:flex-start;
     text-align:left;
     padding:18px 16px;
+    gap:14px;
   }
   .choice-row .choice-card .emoji{font-size:26px;}
+  .choice-sub{display:block; font-weight:500; font-size:12px; color:var(--text-dim); margin-top:3px;}
+  /* Sprint 6B : sélecteur "jours roulés par semaine" (assistant Objectif) */
+  .jr-row{display:flex; gap:6px; margin-bottom:4px;}
+  .jr-btn{
+    flex:1;
+    text-align:center;
+    padding:11px 0;
+    border-radius:var(--radius-sm);
+    border:2px solid var(--border);
+    background:var(--card);
+    color:var(--text-dim);
+    font-weight:800;
+    font-size:14px;
+    cursor:pointer;
+  }
+  .jr-btn.selected{
+    border-color:var(--accent);
+    color:var(--accent);
+    background:linear-gradient(180deg, rgba(245,166,35,.16), rgba(245,166,35,.06));
+  }
 
   .field-label{
     font-size:14px;
@@ -696,6 +724,50 @@
     color:var(--text-dim);
     font-weight:800;
   }
+  /* Sprint 6B : rappel doux affiché dans l'onglet Objectif */
+  .rappel-epargne{
+    margin:14px 20px 0;
+    padding:12px 14px;
+    border-radius:var(--radius-sm);
+    background:rgba(245,166,35,.08);
+    border:1px solid rgba(245,166,35,.25);
+    color:var(--text-dim);
+    font-size:12.5px;
+    font-weight:600;
+    line-height:1.5;
+  }
+  /* Sprint 6B : résumé compact des épargnes actives, sous les 3 blocs de l'accueil */
+  .mini-obj-panel{
+    margin:14px 20px 0;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:14px 16px;
+    cursor:pointer;
+  }
+  .mini-obj-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:12.5px;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    color:var(--text-faint);
+    margin-bottom:8px;
+  }
+  .mini-obj-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:8px 0;
+    font-size:14px;
+    font-weight:700;
+  }
+  .mini-obj-row + .mini-obj-row{border-top:1px solid var(--border);}
+  .mini-obj-ic{font-size:17px;}
+  .mini-obj-nom{flex:1; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .mini-obj-val{color:var(--accent); font-weight:800;}
   .disponible-line{
     margin-top:10px;
     padding-top:10px;
@@ -1008,10 +1080,13 @@
   var NB_SEMAINES_MOYENNE = 4;
   var RAPPEL_SAUVEGARDE_JOURS = 7;
 
+  // Sprint 6B : jusqu'à 3 objectifs (épargnes) actifs en même temps, tous facultatifs.
+  var MAX_OBJECTIFS = 3;
+
   /* ---------- État ---------- */
 
   var state = null;
-  var ui = { screen:"loading", modal:null, modalData:{}, modalReturnTo:null, tab:"aujourdhui", etatPeriode:"semaine", objStep:1, objData:{}, objEditing:false, overlay:null, locked:false, lockPin:"", partagerPeriode:"jour", accueilDate:null };
+  var ui = { screen:"loading", modal:null, modalData:{}, modalReturnTo:null, tab:"aujourdhui", etatPeriode:"semaine", objStep:1, objData:{}, objEditing:false, objCreating:false, overlay:null, locked:false, lockPin:"", partagerPeriode:"jour", accueilDate:null };
 
   // ---------- Sprint 5A : bouton retour du téléphone (navigation, pas de sortie de l'app) ----------
   // Sans ceci, le bouton/geste "retour" du téléphone quitte directement l'application dès qu'on
@@ -1028,7 +1103,14 @@
     if(ui.locked) return false; // pas sur l'écran de verrouillage
     if(ui.modal) return true;
     if(ui.overlay) return true;
-    if(ui.tab === "objectif" && !(state.objectif && state.objectif.actif) && (ui.objStep||1) > 1) return true;
+    if(ui.tab === "objectif"){
+      // Sprint 6B : l'onglet Objectif peut maintenant afficher soit une liste (0 à 3
+      // épargnes), soit l'assistant de création — voir enCreationObjectif(). Le retour
+      // physique doit refermer un niveau à la fois : d'abord une étape de l'assistant,
+      // puis l'assistant lui-même (retour à la liste) s'il y a déjà des objectifs.
+      if(enCreationObjectif() && state.objectifs.length > 0) return true;
+      if(enCreationObjectif() && (ui.objStep||1) > 1) return true;
+    }
     if(ui.tab && ui.tab !== "aujourdhui") return true;
     return false;
   }
@@ -1054,10 +1136,18 @@
       return;
     }
     if(ui.overlay){ ui.overlay = null; render(); return; }
-    if(ui.tab === "objectif" && !(state.objectif && state.objectif.actif) && (ui.objStep||1) > 1){
-      ui.objStep -= 1; render(); return;
+    if(ui.tab === "objectif" && enCreationObjectif()){
+      if((ui.objStep||1) > 1){ ui.objStep -= 1; render(); return; }
+      if(state.objectifs.length > 0){ ui.objCreating = false; ui.objData = {}; render(); return; }
     }
     if(ui.tab && ui.tab !== "aujourdhui"){ ui.tab = "aujourdhui"; render(); return; }
+  }
+
+  // Sprint 6B : vrai quand l'onglet Objectif doit afficher l'assistant de création plutôt
+  // que la liste — soit parce qu'aucun objectif n'existe encore, soit parce que
+  // l'utilisateur a explicitement demandé "Ajouter une autre épargne".
+  function enCreationObjectif(){
+    return state.objectifs.length === 0 || !!ui.objCreating;
   }
 
   function dateToKey(d){
@@ -1085,12 +1175,49 @@
       },
       jours:{},                   // { 'AAAA-MM-JJ': {date, origine:'trepor', recette, charges:[]} }
       dernierMontant:{},          // { rubriqueId: montant }
-      objectif:null,              // { id, modele, sousType, nom, montantCible, dateCreation, pourcentage, actif }
+      // Sprint 6B : remplace l'ancien objectif unique (state.objectif) par une liste de 3
+      // maximum. Chaque élément : { id, modele, sousType, nom, type:'auto'|'manuel',
+      // pourcentage (auto seulement), montantFixeParJour (manuel seulement), joursRoules,
+      // montantCible (0 pour tout nouvel objectif — jauge % réservée aux objectifs migrés
+      // depuis l'ancien modèle unique qui en avaient un), dateCreation, actif }.
+      objectifs:[],
       meta:{                      // suivi interne (sauvegarde), invisible dans l'UI hormis le rappel
         derniereSauvegarde:null,
         dernierRappelSauvegarde:null
       }
     };
+  }
+
+  // Sprint 6B : migration state.objectif (objet unique) → state.objectifs (liste). Appelée au
+  // chargement d'une sauvegarde locale (loadState) et à la restauration d'un fichier JSON
+  // (normaliserEtatImporte). Si `objectifs` est déjà présent (sauvegarde faite depuis ce
+  // sprint), on ne touche à rien. Sinon, si un ancien `objectif` existe, il devient le seul
+  // élément de la liste — l'ancien modèle était toujours en pourcentage automatique, jamais en
+  // montant fixe. L'ancienne clé `objectif` n'est jamais supprimée de force : elle reste dans
+  // l'état si elle était présente, simplement ignorée par le reste du code désormais.
+  function migrerObjectifsListe(obj){
+    if(Array.isArray(obj.objectifs)){
+      obj.objectifs = obj.objectifs.slice(0, MAX_OBJECTIFS);
+      return;
+    }
+    if(obj.objectif && typeof obj.objectif === "object"){
+      var legacy = obj.objectif;
+      obj.objectifs = [{
+        id: legacy.id || uid("obj"),
+        modele: legacy.modele || null,
+        sousType: legacy.sousType || null,
+        nom: legacy.nom || "Mon objectif",
+        type: "auto",
+        pourcentage: legacy.pourcentage || null,
+        montantFixeParJour: null,
+        joursRoules: 6,
+        montantCible: legacy.montantCible || 0,
+        dateCreation: legacy.dateCreation || todayKey(),
+        actif: true
+      }];
+    } else {
+      obj.objectifs = [];
+    }
   }
 
   // Sprint 6A : les rubriques préconfigurées ajoutées après le premier lancement d'un
@@ -1119,7 +1246,7 @@
       parsed.config = Object.assign(base.config, parsed.config);
       parsed.jours = parsed.jours || {};
       parsed.dernierMontant = parsed.dernierMontant || {};
-      if(parsed.objectif === undefined) parsed.objectif = null;
+      migrerObjectifsListe(parsed);
       parsed.meta = Object.assign({}, base.meta, parsed.meta || {});
       ajouterNouvellesRubriquesDefaut(parsed.config);
       return parsed;
@@ -1137,6 +1264,8 @@
     out.jours = parsed.jours || {};
     out.dernierMontant = parsed.dernierMontant || {};
     out.objectif = parsed.objectif !== undefined ? parsed.objectif : null;
+    out.objectifs = parsed.objectifs;
+    migrerObjectifsListe(out);
     out.meta = Object.assign({}, base.meta, parsed.meta || {});
     ajouterNouvellesRubriquesDefaut(out.config);
     return out;
@@ -1396,6 +1525,60 @@
     return Math.max(0, Math.round(total));
   }
 
+  // ---------- Sprint 6B : épargne, version multi-objectifs ----------
+  // Montant que CET objectif alloue pour un jour donné (jour = objet state.jours[k]). Pour un
+  // objectif "auto" (pourcentage), recalculé à partir du solde net réel de ce jour-là (jamais
+  // négatif, jamais si la recette n'a pas encore été saisie). Pour un objectif "manuel"
+  // (montant fixe), le même montant chaque jour où la recette a été saisie, quel que soit le
+  // solde du jour — c'est un choix assumé de l'utilisateur, pas recalculé.
+  function computeEpargneQuotidienneObjectif(obj, jour){
+    if(!obj || !jour || jour.recette === null) return 0;
+    if(obj.type === "auto"){
+      if(!obj.pourcentage) return 0;
+      var solde = soldeNetJour(jour);
+      return solde > 0 ? Math.round(solde * obj.pourcentage / 100) : 0;
+    }
+    return Math.max(0, Math.round(obj.montantFixeParJour || 0));
+  }
+
+  // Épargne cumulée pour UN objectif, depuis sa création (toutes les journées saisies) —
+  // utilisée dans la liste de l'onglet Objectif (jauge % ou montant accumulé selon le type).
+  function computeEpargneCumuleeObjectif(obj){
+    if(!obj) return 0;
+    var total = 0;
+    Object.keys(state.jours).forEach(function(k){
+      if(k < obj.dateCreation) return;
+      var j = state.jours[k];
+      if(!jourADesDonnees(j)) return;
+      total += computeEpargneQuotidienneObjectif(obj, j);
+    });
+    return Math.max(0, Math.round(total));
+  }
+
+  // Somme, pour un jour donné, de l'épargne allouée par TOUS les objectifs actifs — sert au
+  // chiffre "Disponible aujourd'hui" (F4) et au bloc Épargne de l'accueil.
+  function computeEpargneJourTousObjectifs(jour){
+    return (state.objectifs || []).reduce(function(s, obj){
+      return s + computeEpargneQuotidienneObjectif(obj, jour);
+    }, 0);
+  }
+
+  // Somme de l'épargne allouée par tous les objectifs actifs sur une période [range.start,
+  // range.end] (bornes incluses) — sert à Mon état et à l'écran Partager.
+  function computeEpargnePeriodeTousObjectifs(range){
+    var total = 0;
+    (state.objectifs || []).forEach(function(obj){
+      Object.keys(state.jours).forEach(function(k){
+        if(k < range.start || k > range.end) return;
+        if(k < obj.dateCreation) return;
+        var j = state.jours[k];
+        if(!jourADesDonnees(j)) return;
+        total += computeEpargneQuotidienneObjectif(obj, j);
+      });
+    });
+    return Math.round(total);
+  }
+
   function el(html){
     var t = document.createElement("template");
     t.innerHTML = html.trim();
@@ -1497,13 +1680,20 @@
         '<span class="emoji">'+s.emoji+'</span><span>'+esc(s.nom)+'</span></div>';
     }).join("");
 
+    // Sprint 6B : cet écran (4 cartes + un bouton) est nettement plus court que l'espace
+    // disponible sous les pastilles d'étape. Plutôt qu'un grand vide sous le bouton (ancien
+    // spacer flex qui poussait tout en bas), le bloc entier est centré verticalement dans
+    // l'espace restant — le vide se répartit au-dessus et en dessous plutôt que de
+    // s'accumuler à un seul endroit.
     return '' +
-      '<p class="onb-eyebrow">Étape 1 sur 3</p>' +
-      '<h1 class="onb-title">Quel est votre activité ?</h1>' +
-      '<p class="onb-sub">On adapte les rubriques de charges à votre métier.</p>' +
-      '<div class="onb-grid">'+cards+'</div>' +
-      '<div class="onb-spacer"></div>' +
-      '<button class="btn btn-primary" id="onb1-next" '+(cfg.segment?"":"disabled")+'>Continuer</button>';
+      '<div style="flex:1; display:flex; flex-direction:column; justify-content:center;">' +
+        '<p class="onb-eyebrow">Étape 1 sur 3</p>' +
+        '<h1 class="onb-title">Quel est votre activité ?</h1>' +
+        '<p class="onb-sub">On adapte les rubriques de charges à votre métier.</p>' +
+        '<div class="onb-grid">'+cards+'</div>' +
+        '<div style="height:24px;"></div>' +
+        '<button class="btn btn-primary" id="onb1-next" '+(cfg.segment?"":"disabled")+'>Continuer</button>' +
+      '</div>';
   }
 
   function onbStep2(){
@@ -1774,6 +1964,44 @@
 
   /* ===================== ACCUEIL ===================== */
 
+  // Sprint 6B : occupe l'espace resté vide entre les 3 blocs et la barre d'onglets (remarque
+  // terrain), avec un contenu utile plutôt qu'un simple agrandissement artificiel. Deux cas :
+  // aucun objectif encore actif → l'invite discrète d'avant (reprise telle quelle, y compris
+  // la reconnaissance de régularité) ; au moins un objectif actif → un résumé compact de
+  // toutes les épargnes en cours, qui renvoie lui aussi vers l'onglet Objectif au tap.
+  function renderEspaceUtileAccueil(){
+    var objectifs = state.objectifs || [];
+    if(objectifs.length === 0){
+      var nbJours = Object.keys(state.jours).filter(function(k){ return jourADesDonnees(state.jours[k]); }).length;
+      var noteJours = nbJours >= 5 ? '<span class="oi-jours">'+nbJours+' jours enregistrés</span>' : '<span></span>';
+      return '' +
+        '<div class="objectif-invite-subtle" id="objectif-invite-subtle">' +
+          '<span>🎯 Définir un objectif (optionnel)</span>' +
+          noteJours +
+          '<span class="oi-arrow">›</span>' +
+        '</div>';
+    }
+    var rows = objectifs.map(function(obj){
+      var modele = MODELES_OBJECTIF.find(function(m){ return m.id === obj.modele; });
+      var emoji = modele ? modele.emoji : (obj.type === "manuel" ? "✋" : "📈");
+      var cumule = computeEpargneCumuleeObjectif(obj);
+      var valeur = obj.montantCible
+        ? Math.min(100, Math.round(cumule / obj.montantCible * 100)) + "%"
+        : formatFCFA(cumule);
+      return '' +
+        '<div class="mini-obj-row">' +
+          '<span class="mini-obj-ic">'+emoji+'</span>' +
+          '<span class="mini-obj-nom">'+esc(obj.nom)+'</span>' +
+          '<span class="mini-obj-val">'+valeur+'</span>' +
+        '</div>';
+    }).join("");
+    return '' +
+      '<div class="mini-obj-panel" id="mini-obj-panel">' +
+        '<div class="mini-obj-head"><span>Mes épargnes</span><span class="oi-arrow">›</span></div>' +
+        rows +
+      '</div>';
+  }
+
   function renderAccueil(){
     var key = currentEntryKey();
     var estAujourdhui = key === todayKey();
@@ -1783,14 +2011,19 @@
     var solde = (recette||0) - totalCharges;
     var enPerte = recette !== null && solde < 0;
 
-    var objectifActif = state.objectif && state.objectif.actif ? state.objectif : null;
-    var epargneJour = (objectifActif && objectifActif.pourcentage && solde > 0)
-      ? Math.round(solde * objectifActif.pourcentage / 100) : 0;
-    var disponible = solde - epargneJour;
+    // Sprint 6B : le chiffre principal de l'accueil devient "Disponible aujourd'hui" = Recette
+    // − Charges − la somme des épargnes du jour de TOUS les objectifs actifs (et non plus
+    // seulement le solde net). L'ancienne ligne "Disponible" séparée disparaît puisqu'elle
+    // devient ce chiffre. "Jour à perte" continue de refléter le solde net brut (avant
+    // épargne) : mettre de côté ne doit pas, à lui seul, transformer un jour normal en "jour à
+    // perte" affiché en rouge alarmant.
+    var epargneJourTotal = computeEpargneJourTousObjectifs(jour);
+    var disponible = solde - epargneJourTotal;
+    var disponibleNeg = recette !== null && disponible < 0;
 
     var seg = SEGMENTS.find(function(s){return s.id===state.config.segment;});
 
-    // Sprint 5B : le solde net reste la seule grosse information du haut de l'écran, inchangée
+    // Sprint 5B : le chiffre principal reste la seule grosse information du haut de l'écran
     // (F4). Le détail Recette/Charges qui s'affichait dans cette carte est retiré d'ici : il
     // vit maintenant dans les 3 blocs juste en dessous, pour ne plus afficher les mêmes
     // montants deux fois (remarque terrain).
@@ -1798,18 +2031,15 @@
     if(recette === null){
       soldeHtml = '' +
         '<div class="solde-card">' +
-          '<p class="solde-label">Solde net '+(estAujourdhui?"du jour":"— "+esc(formatDateCourte(new Date(key+"T00:00:00"))))+'</p>' +
+          '<p class="solde-label">Disponible '+(estAujourdhui?"aujourd\'hui":"— "+esc(formatDateCourte(new Date(key+"T00:00:00"))))+'</p>' +
           '<p class="solde-value" style="color:var(--text-dim); font-size:22px;">Saisissez d\'abord la recette</p>' +
         '</div>';
     } else {
       soldeHtml = '' +
         '<div class="solde-card '+(enPerte?"perte":"")+'">' +
-          '<p class="solde-label">Solde net '+(estAujourdhui?"du jour":"— "+esc(formatDateCourte(new Date(key+"T00:00:00"))))+'</p>' +
-          '<p class="solde-value '+(enPerte?"neg":"")+'">'+formatFCFA(solde)+'</p>' +
+          '<p class="solde-label">Disponible '+(estAujourdhui?"aujourd\'hui":"— "+esc(formatDateCourte(new Date(key+"T00:00:00"))))+'</p>' +
+          '<p class="solde-value '+(disponibleNeg?"neg":"")+'">'+formatFCFA(disponible)+'</p>' +
           (enPerte ? '<div class="perte-banner">Jour à perte : '+formatFCFA(Math.abs(solde))+'</div>' : '') +
-          (epargneJour > 0
-            ? '<div class="disponible-line">Disponible aujourd\'hui : <b>'+formatFCFA(disponible)+'</b><br>('+formatFCFA(epargneJour)+' mis de côté pour « '+esc(objectifActif.nom)+' »)</div>'
-            : '') +
         '</div>';
     }
 
@@ -1822,21 +2052,16 @@
       : formatFCFA(recette);
     var chargesBlocValeur = formatFCFA(totalCharges);
 
-    // Sprint 6A : le bloc Épargne garde toujours son icône générique (tirelire), qu'un
+    // Sprint 6A : le bloc Épargne garde toujours son icône générique (sac d'argent), qu'un
     // objectif soit actif ou non — l'icône propre à chaque modèle (moto, famille...) reste
     // réservée à l'onglet Objectif, pas dupliquée ici.
-    var epargneIcone = "🐷";
-    var epargneBlocValeur;
-    if(!objectifActif){
-      epargneBlocValeur = '<span class="block3-empty">Aucun</span>';
-    } else {
-      if(objectifActif.montantCible){
-        var pctBloc = Math.min(100, Math.round(computeEpargneObjectif() / objectifActif.montantCible * 100));
-        epargneBlocValeur = pctBloc + "%";
-      } else {
-        epargneBlocValeur = formatFCFA(computeEpargneObjectif());
-      }
-    }
+    // Sprint 6B : reflète l'ensemble des objectifs actifs (montant total mis de côté ce
+    // jour-là), pas un seul — même valeur que celle déduite dans "Disponible aujourd'hui"
+    // ci-dessus, pour que le lien entre les deux soit visible d'un coup d'œil.
+    var epargneIcone = "💰";
+    var epargneBlocValeur = (state.objectifs && state.objectifs.length > 0)
+      ? formatFCFA(epargneJourTotal)
+      : '<span class="block3-empty">Aucun</span>';
 
     var blocsHtml = '' +
       '<div class="blocks3-row">' +
@@ -1874,6 +2099,7 @@
       '</div>' +
       soldeHtml +
       blocsHtml +
+      renderEspaceUtileAccueil() +
       renderTabBarHtml("aujourdhui");
 
     app.innerHTML = html;
@@ -1890,6 +2116,11 @@
       renderModal();
     });
     document.getElementById("block-epargne").addEventListener("click", function(){
+      ui.tab = "objectif";
+      render();
+    });
+    var espaceUtileEl = document.getElementById("objectif-invite-subtle") || document.getElementById("mini-obj-panel");
+    if(espaceUtileEl) espaceUtileEl.addEventListener("click", function(){
       ui.tab = "objectif";
       render();
     });
@@ -2011,13 +2242,15 @@
       '</div>';
 
     // Sprint 6A : pour « Jour », les libellés perdent leur suffixe « totale(s)/cumulé » (un seul
-    // jour, pas une somme) et la Moyenne/jour disparaît (redondante avec le solde du jour seul) —
-    // même logique que l'écran Partager pour son mode Jour.
+    // jour, pas une somme) — même logique que l'écran Partager pour son mode Jour.
+    // Sprint 6B : la ligne « Moyenne / jour » est remplacée par « Épargne » (somme des
+    // objectifs actifs sur la période), affichée pour les 3 périodes (y compris Jour, où elle
+    // n'est plus redondante puisque ce n'est plus une moyenne).
     var labelSolde = periode === "jour" ? "Solde net du jour" : "Solde net cumulé";
     var labelRecette = periode === "jour" ? "Recette" : "Recette totale";
     var labelCharges = periode === "jour" ? "Charges" : "Charges totales";
-    var moyenneItem = periode === "jour" ? "" :
-      '<div class="solde-sub-item"><div class="k">Moyenne / jour</div><div class="v">'+formatFCFA(stats.moyenne)+'</div></div>';
+    var epargnePeriode = computeEpargnePeriodeTousObjectifs(range);
+    var moyenneItem = '<div class="solde-sub-item"><div class="k">Épargne</div><div class="v">'+formatFCFA(epargnePeriode)+'</div></div>';
 
     var html = '' +
       '<div class="home-header">' +
@@ -2069,14 +2302,15 @@
   }
 
   /* ===================== MON OBJECTIF (F7) ===================== */
-  /* Création à partir de modèles pré-configurés, simulateur "3 façons
-     d'y arriver" basé sur le solde net moyen réel des dernières semaines
-     saisies, et suivi de l'objectif actif (un seul objectif à la fois,
-     conservé dans state.objectif). */
+  /* Sprint 6B : jusqu'à 3 objectifs (épargnes) actifs en même temps, tous facultatifs, listés
+     dans state.objectifs. Un seul peut être en pourcentage automatique du solde net ("auto"),
+     recalculé chaque jour ; les autres sont en montant fixe ("manuel"), modifiable à tout
+     moment. La création commence toujours par le choix d'un modèle (Véhicule / Famille / Filet
+     de sécurité / Épargne libre — inchangé depuis les sprints précédents), puis bifurque entre
+     ces deux façons d'épargner. */
 
   function renderObjectif(){
-    var afficherFicheActive = state.objectif && state.objectif.actif && !ui.objEditing;
-    var body = afficherFicheActive ? renderObjectifActif() : renderObjectifCreation();
+    var body = enCreationObjectif() ? renderObjectifCreation() : renderObjectifListe();
     var html = '' +
       '<div class="home-header">' +
         '<div class="home-header-row">' +
@@ -2084,6 +2318,7 @@
           '<button class="icon-btn" id="btn-reglages" aria-label="Réglages">⚙️</button>' +
         '</div>' +
       '</div>' +
+      '<div class="rappel-epargne">Faut pas zahé, bloque ton épargne du jour sur mobile money ou transfert sur ton compte bancaire.</div>' +
       body +
       renderTabBarHtml("objectif");
 
@@ -2097,58 +2332,47 @@
     attachTabBarEvents();
   }
 
-  function renderObjectifActif(){
-    var obj = state.objectif;
-    var epargne = computeEpargneObjectif();
-    var modele = MODELES_OBJECTIF.find(function(m){ return m.id === obj.modele; });
-    var info = computeMoyenneHebdoRecente();
-    var epargneHebdo = (obj.pourcentage && info.moyenne > 0) ? (info.moyenne * obj.pourcentage / 100) : 0;
+  // Liste des objectifs actifs (jauge % pour ceux qui ont une cible — objectifs migrés depuis
+  // l'ancien modèle unique — ou simple montant accumulé sinon), + bouton d'ajout tant qu'il
+  // reste de la place.
+  function renderObjectifListe(){
+    var cards = state.objectifs.map(renderObjectifCard).join("");
+    var peutAjouter = state.objectifs.length < MAX_OBJECTIFS;
+    var ajoutHtml = peutAjouter
+      ? '<div style="margin:16px 20px 0;"><button class="btn btn-primary" id="obj-ajouter-autre">＋ Ajouter une autre épargne</button></div>'
+      : '<p class="field-help" style="margin:16px 20px 0; text-align:center;">Vous avez atteint le maximum de 3 épargnes actives.</p>';
+    return cards + ajoutHtml;
+  }
 
-    if(!obj.montantCible){
-      // Épargne libre (Sprint 5A) : pas de cible, donc ni jauge en %, ni délai à afficher.
-      return '' +
-        '<div class="solde-card" style="margin:14px 20px 0;">' +
-          '<p class="solde-label">'+(modele?modele.emoji+' ':'💰 ')+esc(obj.nom)+'</p>' +
-          '<p class="solde-value" style="color:var(--text); font-size:30px;">'+formatFCFA(epargne)+
-            ' <span style="font-size:15px; color:var(--text-dim); font-weight:600;">mis de côté</span></p>' +
-          (obj.pourcentage
-            ? '<p style="color:var(--text-dim); font-size:13px; margin-top:10px;">Rythme : '+obj.pourcentage+'% du solde net chaque semaine'+(epargneHebdo>0?' · environ '+formatFCFA(epargneHebdo)+' / semaine':'')+'</p>'
-            : '') +
-        '</div>' +
-        '<div class="charges-section">' +
-          '<div class="btn-row">' +
-            '<button class="btn btn-ghost btn-sm" id="obj-changer-rythme">Changer de rythme</button>' +
-            '<button class="btn btn-danger-ghost btn-sm" id="obj-supprimer">Supprimer</button>' +
-          '</div>' +
-        '</div>';
+  function renderObjectifCard(obj){
+    var modele = MODELES_OBJECTIF.find(function(m){ return m.id === obj.modele; });
+    var emoji = modele ? modele.emoji : (obj.type === "manuel" ? "✋" : "📈");
+    var cumule = computeEpargneCumuleeObjectif(obj);
+    var rythmeTxt = obj.type === "auto"
+      ? (obj.pourcentage ? obj.pourcentage+"% du solde net, recalculé chaque jour" : "Automatique")
+      : formatFCFA(obj.montantFixeParJour||0)+" fixes chaque jour";
+    var joursTxt = obj.joursRoules ? " · "+obj.joursRoules+" j/semaine" : "";
+
+    var body;
+    if(obj.montantCible){
+      var pct = Math.min(1, cumule / obj.montantCible);
+      var pctAff = Math.round(pct * 100);
+      body = '' +
+        '<div class="objectif-card-head"><span>'+emoji+' '+esc(obj.nom)+'</span><span>'+pctAff+'%</span></div>' +
+        '<div class="gauge-track"><div class="gauge-fill" style="width:'+pctAff+'%"></div></div>' +
+        '<div class="objectif-card-sub">'+formatFCFA(cumule)+' sur '+formatFCFA(obj.montantCible)+' · '+rythmeTxt+joursTxt+'</div>';
+    } else {
+      body = '' +
+        '<div class="objectif-card-head"><span>'+emoji+' '+esc(obj.nom)+'</span></div>' +
+        '<div class="objectif-card-sub">'+formatFCFA(cumule)+' mis de côté · '+rythmeTxt+joursTxt+'</div>';
     }
 
-    var pct = Math.min(1, epargne / obj.montantCible);
-    var pctAff = Math.round(pct * 100);
-    var restant = Math.max(0, obj.montantCible - epargne);
-    var semainesRestantes = epargneHebdo > 0 ? Math.ceil(restant / epargneHebdo) : null;
-    var atteint = epargne >= obj.montantCible;
-
     return '' +
-      '<div class="solde-card" style="margin:14px 20px 0;">' +
-        '<p class="solde-label">'+(modele?modele.emoji+' ':'🎯 ')+esc(obj.nom)+'</p>' +
-        '<p class="solde-value" style="color:var(--text); font-size:30px;">'+formatFCFA(epargne)+
-          ' <span style="font-size:15px; color:var(--text-dim); font-weight:600;">sur '+formatFCFA(obj.montantCible)+'</span></p>' +
-        '<div class="gauge-track"><div class="gauge-fill" style="width:'+pctAff+'%"></div></div>' +
-        (atteint
-          ? '<div class="perte-banner" style="background:rgba(52,179,126,.16); color:var(--green); margin-top:10px;">🎉 Objectif atteint !</div>'
-          : '' +
-            '<p style="color:var(--text-dim); font-size:13px; margin-top:10px;">'+pctAff+'% atteint'+
-              (obj.pourcentage ? ' · Rythme : '+obj.pourcentage+'% du solde net chaque semaine' : '')+'</p>' +
-            (semainesRestantes !== null
-              ? '<p style="color:var(--text-dim); font-size:13px; margin-top:2px;">Encore environ '+formatDureeSemaines(semainesRestantes)+' à ce rythme</p>'
-              : '<p style="color:var(--text-dim); font-size:13px; margin-top:2px;">Saisissez quelques jours de plus pour affiner l\'estimation.</p>')
-        ) +
-      '</div>' +
-      '<div class="charges-section">' +
-        '<div class="btn-row">' +
-          '<button class="btn btn-ghost btn-sm" id="obj-changer-rythme">Changer de rythme</button>' +
-          '<button class="btn btn-danger-ghost btn-sm" id="obj-supprimer">Supprimer</button>' +
+      '<div class="objectif-card" style="cursor:default;">' +
+        body +
+        '<div class="btn-row" style="margin-top:12px;">' +
+          '<button class="btn btn-ghost btn-sm" data-obj-modifier="'+obj.id+'">Modifier</button>' +
+          '<button class="btn btn-danger-ghost btn-sm" data-obj-supprimer="'+obj.id+'">Supprimer</button>' +
         '</div>' +
       '</div>';
   }
@@ -2158,15 +2382,18 @@
     var body;
     if(step === 1) body = objStep1();
     else if(step === 2) body = objStep2();
-    else body = objStep3();
-    return '<div style="padding:0 20px;">' + body + '</div>';
+    else body = ui.objData.type === "manuel" ? objStep3Manuel() : objStep3Auto();
+    // Sprint 6B : centre verticalement le contenu de l'assistant dans l'espace restant entre
+    // l'en-tête et la barre d'onglets — surtout utile à l'étape 1 (choix du modèle, un simple
+    // 2×2 suivi d'un bouton) qui, sinon, laisse un grand vide au-dessus de la barre d'onglets.
+    return '<div style="padding:0 20px; flex:1; display:flex; flex-direction:column; justify-content:center;">' + body + '</div>';
   }
 
   function objStep1(){
     var cards = MODELES_OBJECTIF.map(function(m){
       var sel = ui.objData.modele === m.id ? "selected" : "";
       return '' +
-        '<div class="choice-card '+sel+'" data-modele="'+m.id+'" style="padding:18px 10px;">' +
+        '<div class="choice-card '+sel+'" data-modele="'+m.id+'">' +
           '<span class="emoji">'+m.emoji+'</span><span>'+esc(m.nom)+'</span>' +
           '<span style="font-size:11px; color:var(--text-dim); font-weight:400;">'+esc(m.desc)+'</span>' +
         '</div>';
@@ -2192,39 +2419,71 @@
       '<p class="onb-sub">Choisissez ce qui vous ressemble le plus.</p>' +
       '<div class="onb-grid" style="grid-template-columns:repeat(2,1fr);">'+cards+'</div>' +
       sousTypesHtml +
-      '<div style="height:10px;"></div>' +
+      '<div style="height:20px;"></div>' +
       '<button class="btn btn-primary" id="obj1-next" '+(ui.objData.modele?"":"disabled")+'>Continuer</button>';
   }
 
+  // Sprint 6B : remplace l'ancienne étape "nom + montant cible" — on choisit d'abord comment
+  // l'épargne du jour sera calculée, avant de saisir les détails (étape 3).
   function objStep2(){
-    var modele = MODELES_OBJECTIF.find(function(m){ return m.id === ui.objData.modele; });
-    var sansCible = ui.objData.modele === "epargne_libre";
-    if(!ui.objData.nom){
-      ui.objData.nom = (modele ? modele.nom : "Mon objectif") + (ui.objData.sousType ? " — "+ui.objData.sousType : "");
-    }
-    var peutContinuer = sansCible || !!ui.objData.montantCible;
+    var dejaAuto = state.objectifs.find(function(o){ return o.type === "auto"; });
     return '' +
       '<p class="onb-eyebrow" style="margin-top:16px;">Nouvel objectif</p>' +
-      '<h1 class="onb-title" style="font-size:20px;">Encore deux ou trois choses</h1>' +
-      '<p class="field-label">Comment on l\'appelle ?</p>' +
-      '<input type="text" class="text-input" id="obj-nom" value="'+esc(ui.objData.nom||"")+'" maxlength="40">' +
-      '<p class="field-label" style="margin-top:14px;">Montant visé'+(sansCible?" (optionnel)":"")+'</p>' +
-      '<div class="amount-input-wrap">' +
-        '<input type="text" inputmode="numeric" id="obj-montant" placeholder="0" value="'+esc(spacedDigits(ui.objData.montantCible))+'">' +
-        '<span class="suffix">F</span>' +
+      '<h1 class="onb-title" style="font-size:20px;">Comment vous voulez épargner ?</h1>' +
+      '<p class="onb-sub">Vous pourrez changer cela plus tard.</p>' +
+      '<div class="choice-row">' +
+        '<div class="choice-card '+(ui.objData.type==="manuel"?"selected":"")+'" data-type="manuel">' +
+          '<span class="emoji">✋</span>' +
+          '<span>Manuel<span class="choice-sub">Un montant fixe, décidé par vous, chaque jour</span></span>' +
+        '</div>' +
+        '<div class="choice-card '+(ui.objData.type==="auto"?"selected":"")+(dejaAuto?" disabled":"")+'" data-type="auto">' +
+          '<span class="emoji">📈</span>' +
+          '<span>Automatique<span class="choice-sub">'+(dejaAuto ? 'Déjà utilisé par « '+esc(dejaAuto.nom)+' » — un seul à la fois' : 'Un pourcentage du solde net, recalculé chaque jour')+'</span></span>' +
+        '</div>' +
       '</div>' +
-      (sansCible ? '<p class="field-help">Laissez à 0 si vous voulez juste mettre de côté, sans montant précis en tête.</p>' : '') +
-      '<div style="height:10px;"></div>' +
       '<div class="btn-row">' +
         '<button class="btn btn-ghost" id="obj2-back">Retour</button>' +
-        '<button class="btn btn-primary" id="obj2-next" '+(peutContinuer?"":"disabled")+'>Voir mes options</button>' +
+        '<button class="btn btn-primary" id="obj2-next" '+(ui.objData.type?"":"disabled")+'>Continuer</button>' +
       '</div>';
   }
 
-  function objStep3(){
-    var sansCible = ui.objData.modele === "epargne_libre" && !ui.objData.montantCible;
-    var montantCible = ui.objData.montantCible || 0;
-    var scenarios = computeScenarios(montantCible);
+  function renderJoursRoulesRow(valeurActuelle){
+    var jr = valeurActuelle || 6;
+    return '<div class="jr-row">' + [1,2,3,4,5,6,7].map(function(n){
+      return '<div class="jr-btn '+(jr===n?"selected":"")+'" data-jours="'+n+'">'+n+'</div>';
+    }).join("") + '</div>';
+  }
+
+  function objStep3Manuel(){
+    if(!ui.objData.nomTouched && !ui.objData.nom) ui.objData.nom = "Épargne";
+    var jr = ui.objData.joursRoules || 6;
+    var estimationHebdo = ui.objData.montantFixeParJour ? ui.objData.montantFixeParJour * jr : 0;
+    var peutContinuer = !!ui.objData.montantFixeParJour;
+    return '' +
+      '<p class="onb-eyebrow" style="margin-top:16px;">Nouvel objectif — Manuel</p>' +
+      '<h1 class="onb-title" style="font-size:20px;">Vos réglages</h1>' +
+      '<p class="field-label">Comment on l\'appelle ?</p>' +
+      '<input type="text" class="text-input" id="obj-nom" value="'+esc(ui.objData.nom||"")+'" maxlength="40">' +
+      '<p class="field-label" style="margin-top:14px;">Combien de jours roulez-vous par semaine ?</p>' +
+      renderJoursRoulesRow(jr) +
+      '<p class="field-label" style="margin-top:14px;">Montant visé chaque jour</p>' +
+      '<div class="amount-input-wrap">' +
+        '<input type="text" inputmode="numeric" id="obj-montant-fixe" placeholder="0" value="'+esc(spacedDigits(ui.objData.montantFixeParJour))+'">' +
+        '<span class="suffix">F</span>' +
+      '</div>' +
+      (estimationHebdo > 0
+        ? '<p class="field-help">Soit environ '+formatFCFA(estimationHebdo)+' par semaine, à ce rythme.</p>'
+        : '<p class="field-help">Un montant fixe, à mettre de côté chaque jour où vous travaillez. Modifiable à tout moment.</p>') +
+      '<div style="height:10px;"></div>' +
+      '<div class="btn-row">' +
+        '<button class="btn btn-ghost" id="obj3-back">Retour</button>' +
+        '<button class="btn btn-primary" id="obj3-finish" '+(peutContinuer?"":"disabled")+'>Valider mon objectif</button>' +
+      '</div>';
+  }
+
+  function objStep3Auto(){
+    var jr = ui.objData.joursRoules || 6;
+    var scenarios = computeScenarios(0); // pas de cible pour un objectif créé via ce sprint
     var info = computeMoyenneHebdoRecente();
 
     var note = info.nbSemaines === 0
@@ -2239,13 +2498,15 @@
             '<div class="sc-name">'+(NOMS_SCENARIO[s.pourcentage]||"")+' · '+s.pourcentage+'%</div>' +
             '<div class="sc-sub">'+(s.epargneHebdo>0 ? formatFCFA(s.epargneHebdo)+" / semaine" : "à déterminer")+'</div>' +
           '</div>' +
-          '<div class="sc-duree">'+(sansCible ? "Libre" : formatDureeSemaines(s.semaines))+'</div>' +
         '</div>';
     }).join("");
 
     return '' +
-      '<p class="onb-eyebrow" style="margin-top:16px;">Comment y arriver</p>' +
+      '<p class="onb-eyebrow" style="margin-top:16px;">Nouvel objectif — Automatique</p>' +
       '<h1 class="onb-title" style="font-size:20px;">À quel rythme ?</h1>' +
+      '<p class="field-label">Combien de jours roulez-vous par semaine ?</p>' +
+      renderJoursRoulesRow(jr) +
+      '<div style="height:10px;"></div>' +
       note +
       '<div class="choice-row" style="margin-top:14px;">'+cards+'</div>' +
       '<div class="btn-row">' +
@@ -2254,26 +2515,63 @@
       '</div>';
   }
 
+  function finaliserCreationObjectif(){
+    if(state.objectifs.length >= MAX_OBJECTIFS){
+      showToast("3 épargnes actives au maximum.");
+      return;
+    }
+    if(ui.objData.type === "auto" && state.objectifs.some(function(o){ return o.type === "auto"; })){
+      showToast("Un seul objectif automatique à la fois.");
+      return;
+    }
+    var modele = MODELES_OBJECTIF.find(function(m){ return m.id === ui.objData.modele; });
+    var nomFinal = ui.objData.type === "manuel"
+      ? ((ui.objData.nom||"").trim() || "Épargne")
+      : ((modele ? modele.nom : "Mon objectif") + (ui.objData.sousType ? " — "+ui.objData.sousType : ""));
+    var nouvel = {
+      id: uid("obj"),
+      modele: ui.objData.modele || null,
+      sousType: ui.objData.sousType || null,
+      nom: nomFinal,
+      type: ui.objData.type,
+      pourcentage: ui.objData.type === "auto" ? ui.objData.pourcentageChoisi : null,
+      montantFixeParJour: ui.objData.type === "manuel" ? (ui.objData.montantFixeParJour || 0) : null,
+      montantCible: 0,
+      joursRoules: ui.objData.joursRoules || 6,
+      dateCreation: todayKey(),
+      actif: true
+    };
+    state.objectifs.push(nouvel);
+    saveState();
+    ui.objStep = 1;
+    ui.objData = {};
+    ui.objCreating = false;
+    renderObjectif();
+    showToast("Objectif enregistré.");
+  }
+
   function attachObjectifEvents(){
-    if(state.objectif && state.objectif.actif && !ui.objEditing){
-      var chRythme = document.getElementById("obj-changer-rythme");
-      if(chRythme) chRythme.addEventListener("click", function(){
-        ui.objData = {
-          modele: state.objectif.modele,
-          sousType: state.objectif.sousType,
-          nom: state.objectif.nom,
-          montantCible: state.objectif.montantCible,
-          pourcentageChoisi: null
-        };
-        ui.objEditing = true;
-        ui.objStep = 3;
-        renderObjectif();
+    if(!enCreationObjectif()){
+      document.querySelectorAll("[data-obj-modifier]").forEach(function(node){
+        node.addEventListener("click", function(){
+          ui.modal = "modifier-objectif";
+          ui.modalData = { objId: node.getAttribute("data-obj-modifier") };
+          renderModal();
+        });
       });
-      var suppr = document.getElementById("obj-supprimer");
-      if(suppr) suppr.addEventListener("click", function(){
-        ui.modal = "confirm-suppr-objectif";
-        ui.modalData = {};
-        renderModal();
+      document.querySelectorAll("[data-obj-supprimer]").forEach(function(node){
+        node.addEventListener("click", function(){
+          ui.modal = "confirm-suppr-objectif";
+          ui.modalData = { objId: node.getAttribute("data-obj-supprimer") };
+          renderModal();
+        });
+      });
+      var ajouterBtn = document.getElementById("obj-ajouter-autre");
+      if(ajouterBtn) ajouterBtn.addEventListener("click", function(){
+        ui.objCreating = true;
+        ui.objStep = 1;
+        ui.objData = {};
+        renderObjectif();
       });
       return;
     }
@@ -2299,63 +2597,58 @@
     }
 
     if(step === 2){
-      var nomInput = document.getElementById("obj-nom");
-      if(nomInput) nomInput.addEventListener("input", function(){ ui.objData.nom = nomInput.value; });
-      var montantInput = document.getElementById("obj-montant");
-      var next2 = document.getElementById("obj2-next");
-      attachAmountInput(montantInput, function(value){
-        ui.objData.montantCible = value;
-        if(next2) next2.disabled = !value && ui.objData.modele !== "epargne_libre";
+      var dejaAuto = state.objectifs.some(function(o){ return o.type === "auto"; });
+      app.querySelectorAll("[data-type]").forEach(function(node){
+        node.addEventListener("click", function(){
+          if(node.getAttribute("data-type") === "auto" && dejaAuto){
+            showToast("Un seul objectif automatique à la fois.");
+            return;
+          }
+          ui.objData.type = node.getAttribute("data-type");
+          renderObjectif();
+        });
       });
       var back2 = document.getElementById("obj2-back");
       if(back2) back2.addEventListener("click", function(){ ui.objStep = 1; renderObjectif(); });
+      var next2 = document.getElementById("obj2-next");
       if(next2) next2.addEventListener("click", function(){
-        if(nomInput) ui.objData.nom = nomInput.value.trim() || ui.objData.nom;
+        if(!ui.objData.joursRoules) ui.objData.joursRoules = 6;
         ui.objStep = 3;
         renderObjectif();
       });
     }
 
     if(step === 3){
-      app.querySelectorAll("[data-scenario]").forEach(function(node){
+      app.querySelectorAll("[data-jours]").forEach(function(node){
         node.addEventListener("click", function(){
-          ui.objData.pourcentageChoisi = parseInt(node.getAttribute("data-scenario"), 10);
+          ui.objData.joursRoules = parseInt(node.getAttribute("data-jours"), 10);
           renderObjectif();
         });
       });
       var back3 = document.getElementById("obj3-back");
-      if(back3) back3.addEventListener("click", function(){
-        if(ui.objEditing){
-          // "Changer de rythme" ne repasse pas par le choix du modèle : Retour annule et revient à la fiche.
-          ui.objEditing = false;
-          ui.objStep = 1;
-          ui.objData = {};
-          renderObjectif();
-        } else {
-          ui.objStep = 2;
-          renderObjectif();
-        }
-      });
+      if(back3) back3.addEventListener("click", function(){ ui.objStep = 2; renderObjectif(); });
+
       var finish3 = document.getElementById("obj3-finish");
-      if(finish3) finish3.addEventListener("click", function(){
-        var enCours = state.objectif; // conserve id + date de création si on change juste de rythme
-        state.objectif = {
-          id: enCours ? enCours.id : uid("obj"),
-          modele: ui.objData.modele,
-          sousType: ui.objData.sousType || null,
-          nom: (ui.objData.nom||"").trim() || "Mon objectif",
-          montantCible: ui.objData.montantCible || 0,
-          dateCreation: enCours ? enCours.dateCreation : todayKey(),
-          pourcentage: ui.objData.pourcentageChoisi,
-          actif: true
-        };
-        saveState();
-        ui.objStep = 1;
-        ui.objData = {};
-        ui.objEditing = false;
-        renderObjectif();
-        showToast("Objectif enregistré.");
-      });
+      if(ui.objData.type === "manuel"){
+        var nomInput = document.getElementById("obj-nom");
+        if(nomInput) nomInput.addEventListener("input", function(){
+          ui.objData.nom = nomInput.value;
+          ui.objData.nomTouched = true;
+        });
+        var montantInput = document.getElementById("obj-montant-fixe");
+        attachAmountInput(montantInput, function(value){
+          ui.objData.montantFixeParJour = value;
+          if(finish3) finish3.disabled = !value;
+        });
+      } else {
+        app.querySelectorAll("[data-scenario]").forEach(function(node){
+          node.addEventListener("click", function(){
+            ui.objData.pourcentageChoisi = parseInt(node.getAttribute("data-scenario"), 10);
+            renderObjectif();
+          });
+        });
+      }
+      if(finish3) finish3.addEventListener("click", finaliserCreationObjectif);
     }
   }
 
@@ -2380,6 +2673,7 @@
     else if(ui.modal === "changer-date") sheetHtml = modalChangerDate();
     else if(ui.modal === "jour-detail") sheetHtml = modalJourDetail();
     else if(ui.modal === "confirm-suppr-objectif") sheetHtml = modalConfirmSupprObjectif();
+    else if(ui.modal === "modifier-objectif") sheetHtml = modalModifierObjectif();
     else if(ui.modal === "confirm-restaurer") sheetHtml = modalConfirmRestaurer();
     else if(ui.modal === "perso-modal-reglages") sheetHtml = '<div class="modal-handle"></div>' + renderPersoForm("modal");
     else if(ui.modal === "confirm-suppr-rubrique") sheetHtml = modalConfirmSupprRubrique();
@@ -2404,6 +2698,7 @@
     else if(ui.modal === "changer-date") attachModalChangerDateEvents();
     else if(ui.modal === "jour-detail") attachModalJourDetailEvents();
     else if(ui.modal === "confirm-suppr-objectif") attachModalConfirmSupprObjectifEvents();
+    else if(ui.modal === "modifier-objectif") attachModalModifierObjectifEvents();
     else if(ui.modal === "confirm-restaurer") attachModalConfirmRestaurerEvents();
     else if(ui.modal === "perso-modal-reglages") attachPersoFormEvents(function(){ renderModal(); renderReglagesScreen(); }, false);
     else if(ui.modal === "confirm-suppr-rubrique") attachModalConfirmSupprRubriqueEvents();
@@ -2718,10 +3013,12 @@
   }
 
   function modalConfirmSupprObjectif(){
+    var obj = state.objectifs.find(function(o){ return o.id === ui.modalData.objId; });
+    var nom = obj ? obj.nom : "cet objectif";
     return '' +
       '<div class="modal-handle"></div>' +
       '<div class="confirm-box">' +
-        '<h2 class="modal-title">Supprimer cet objectif ?</h2>' +
+        '<h2 class="modal-title">Supprimer « '+esc(nom)+' » ?</h2>' +
         '<p>Votre progression enregistrée sera perdue. Cette action ne peut pas être annulée.</p>' +
         '<div class="btn-row" style="margin-top:10px;">' +
           '<button class="btn btn-ghost" id="confirm-suppr-obj-non">Non</button>' +
@@ -2733,13 +3030,113 @@
   function attachModalConfirmSupprObjectifEvents(){
     document.getElementById("confirm-suppr-obj-non").addEventListener("click", closeModal);
     document.getElementById("confirm-suppr-obj-oui").addEventListener("click", function(){
-      state.objectif = null;
+      var objId = ui.modalData.objId;
+      state.objectifs = state.objectifs.filter(function(o){ return o.id !== objId; });
       saveState();
       ui.objStep = 1;
       ui.objData = {};
-      ui.objEditing = false;
+      ui.objCreating = false;
       closeModal();
       renderObjectif();
+    });
+  }
+
+  // Sprint 6B : édition d'un objectif existant — nom, jours roulés/semaine, et selon le type,
+  // soit le montant fixe quotidien (manuel), soit le rythme en % (automatique, via les mêmes
+  // scénarios 10/20/30 qu'à la création). Tout est "modifiable à tout moment", regroupé dans
+  // une seule modale plutôt qu'un assistant complet — pas besoin de repasser par le choix du
+  // modèle pour changer un montant ou un pourcentage.
+  function modalModifierObjectif(){
+    var obj = state.objectifs.find(function(o){ return o.id === ui.modalData.objId; });
+    if(!obj){
+      return '<div class="modal-handle"></div><p class="modal-sub">Objectif introuvable.</p>' +
+        '<button class="btn btn-ghost" id="modif-obj-close">Fermer</button>';
+    }
+    var jr = ui.modalData.joursRoules !== undefined ? ui.modalData.joursRoules : (obj.joursRoules || 6);
+    var nomVal = ui.modalData.nom !== undefined ? ui.modalData.nom : obj.nom;
+
+    var champsSpecifiques;
+    if(obj.type === "manuel"){
+      var montant = ui.modalData.montantFixeParJour !== undefined ? ui.modalData.montantFixeParJour : obj.montantFixeParJour;
+      champsSpecifiques = '' +
+        '<p class="field-label" style="margin-top:14px;">Montant fixe chaque jour</p>' +
+        '<div class="amount-input-wrap">' +
+          '<input type="text" inputmode="numeric" id="modif-obj-montant" placeholder="0" value="'+esc(spacedDigits(montant))+'">' +
+          '<span class="suffix">F</span>' +
+        '</div>';
+    } else {
+      var scenarios = computeScenarios(obj.montantCible || 0);
+      var pctChoisi = ui.modalData.pourcentageChoisi !== undefined ? ui.modalData.pourcentageChoisi : obj.pourcentage;
+      champsSpecifiques = '' +
+        '<p class="field-label" style="margin-top:14px;">Rythme</p>' +
+        '<div class="choice-row">' + scenarios.map(function(s){
+          var sel = pctChoisi === s.pourcentage ? "selected" : "";
+          return '' +
+            '<div class="choice-card scenario-card '+sel+'" data-scenario="'+s.pourcentage+'">' +
+              '<div>' +
+                '<div class="sc-name">'+(NOMS_SCENARIO[s.pourcentage]||"")+' · '+s.pourcentage+'%</div>' +
+                '<div class="sc-sub">'+(s.epargneHebdo>0 ? formatFCFA(s.epargneHebdo)+" / semaine" : "à déterminer")+'</div>' +
+              '</div>' +
+            '</div>';
+        }).join("") + '</div>';
+    }
+
+    return '' +
+      '<div class="modal-handle"></div>' +
+      '<h2 class="modal-title">Modifier « '+esc(obj.nom)+' »</h2>' +
+      '<p class="field-label">Nom</p>' +
+      '<input type="text" class="text-input" id="modif-obj-nom" value="'+esc(nomVal)+'" maxlength="40">' +
+      '<p class="field-label" style="margin-top:14px;">Jours roulés par semaine</p>' +
+      renderJoursRoulesRow(jr) +
+      champsSpecifiques +
+      '<div style="height:14px"></div>' +
+      '<div class="btn-row">' +
+        '<button class="btn btn-ghost" id="modif-obj-cancel">Annuler</button>' +
+        '<button class="btn btn-primary" id="modif-obj-save">Enregistrer</button>' +
+      '</div>';
+  }
+
+  function attachModalModifierObjectifEvents(){
+    var obj = state.objectifs.find(function(o){ return o.id === ui.modalData.objId; });
+    if(!obj){
+      var closeBtn = document.getElementById("modif-obj-close");
+      if(closeBtn) closeBtn.addEventListener("click", closeModal);
+      return;
+    }
+    var nomInput = document.getElementById("modif-obj-nom");
+    if(nomInput) nomInput.addEventListener("input", function(){ ui.modalData.nom = nomInput.value; });
+    document.querySelectorAll("[data-jours]").forEach(function(node){
+      node.addEventListener("click", function(){
+        ui.modalData.joursRoules = parseInt(node.getAttribute("data-jours"), 10);
+        renderModal();
+      });
+    });
+    if(obj.type === "manuel"){
+      var montantInput = document.getElementById("modif-obj-montant");
+      attachAmountInput(montantInput, function(value){ ui.modalData.montantFixeParJour = value; });
+    } else {
+      document.querySelectorAll("[data-scenario]").forEach(function(node){
+        node.addEventListener("click", function(){
+          ui.modalData.pourcentageChoisi = parseInt(node.getAttribute("data-scenario"), 10);
+          renderModal();
+        });
+      });
+    }
+    document.getElementById("modif-obj-cancel").addEventListener("click", closeModal);
+    document.getElementById("modif-obj-save").addEventListener("click", function(){
+      var nomInputEl = document.getElementById("modif-obj-nom");
+      obj.nom = (nomInputEl ? nomInputEl.value.trim() : "") || obj.nom;
+      obj.joursRoules = ui.modalData.joursRoules !== undefined ? ui.modalData.joursRoules : obj.joursRoules;
+      if(obj.type === "manuel"){
+        var montantInputEl = document.getElementById("modif-obj-montant");
+        obj.montantFixeParJour = parseAmountInput(montantInputEl ? montantInputEl.value : ui.modalData.montantFixeParJour);
+      } else if(ui.modalData.pourcentageChoisi){
+        obj.pourcentage = ui.modalData.pourcentageChoisi;
+      }
+      saveState();
+      closeModal();
+      renderObjectif();
+      showToast("Objectif mis à jour.");
     });
   }
 
@@ -2798,6 +3195,7 @@
       ui.objStep = 1;
       ui.objData = {};
       ui.objEditing = false;
+      ui.objCreating = false;
       ui.etatPeriode = "semaine";
       ui.partagerPeriode = "jour";
       ui.locked = !!(state.config.pinActif && state.config.pinCode);
@@ -3346,7 +3744,8 @@
         chargesTotales: stats.chargesTotales,
         solde: stats.soldeCumule,
         parRubrique: stats.parRubrique,
-        moyenne: stats.moyenne
+        moyenne: stats.moyenne,
+        epargne: computeEpargnePeriodeTousObjectifs(range) // Sprint 6B
       };
     }
     // periode === "jour"
@@ -3366,7 +3765,8 @@
       recetteInconnue: recette === null,
       chargesTotales: chargesTotales,
       solde: (recette || 0) - chargesTotales,
-      parRubrique: parRubrique
+      parRubrique: parRubrique,
+      epargne: computeEpargneJourTousObjectifs(j) // Sprint 6B
     };
   }
 
@@ -3470,27 +3870,33 @@
     ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad, y); ctx.stroke();
     y += 56;
 
-    var colW = (W - pad*2) / 2;
+    // Sprint 6B : 3 colonnes centrées Recette / Charges / Épargne (remplace les 2 colonnes
+    // Recette/Charges + la ligne Moyenne/jour séparée) — épargne = somme des objectifs actifs
+    // sur la période.
+    var colW3 = (W - pad*2) / 3;
+    var labels3 = [
+      data.periode === "jour" ? "RECETTE" : "RECETTE TOTALE",
+      data.periode === "jour" ? "CHARGES" : "CHARGES TOTALES",
+      "ÉPARGNE"
+    ];
+    var valeurs3 = [
+      data.recetteInconnue ? "—" : formatFCFA(data.recette),
+      formatFCFA(data.chargesTotales),
+      formatFCFA(data.epargne || 0)
+    ];
+    ctx.textAlign = "center";
     ctx.fillStyle = "#9aa0ac";
-    ctx.font = "800 22px " + SHARE_FONT;
-    ctx.fillText(data.periode === "jour" ? "RECETTE" : "RECETTE TOTALE", pad, y);
-    ctx.fillText(data.periode === "jour" ? "CHARGES" : "CHARGES TOTALES", pad + colW, y);
-    y += 48;
+    ctx.font = "800 20px " + SHARE_FONT;
+    labels3.forEach(function(lbl, i){
+      ctx.fillText(lbl, pad + colW3*i + colW3/2, y);
+    });
+    y += 46;
     ctx.fillStyle = "#f2f3f5";
-    ctx.font = "800 44px " + SHARE_FONT;
-    ctx.fillText(data.recetteInconnue ? "—" : formatFCFA(data.recette), pad, y);
-    ctx.fillText(formatFCFA(data.chargesTotales), pad + colW, y);
-
-    if(data.periode !== "jour"){
-      y += 62;
-      ctx.fillStyle = "#9aa0ac";
-      ctx.font = "800 22px " + SHARE_FONT;
-      ctx.fillText("MOYENNE / JOUR", pad, y);
-      y += 44;
-      ctx.fillStyle = "#f2f3f5";
-      ctx.font = "800 36px " + SHARE_FONT;
-      ctx.fillText(formatFCFA(data.moyenne), pad, y);
-    }
+    ctx.font = "800 34px " + SHARE_FONT;
+    valeurs3.forEach(function(v, i){
+      ctx.fillText(v, pad + colW3*i + colW3/2, y);
+    });
+    ctx.textAlign = "left";
 
     y += 58;
     ctx.strokeStyle = "#2a2f3b";
