@@ -114,7 +114,7 @@
     font-weight:600;
     cursor:pointer;
   }
-  .choice-card .emoji{font-size:34px;}
+  .choice-card .emoji{font-size:48px;}
   .choice-card.selected{
     border-color:var(--accent);
     background:linear-gradient(180deg, rgba(245,166,35,.16), rgba(245,166,35,.06));
@@ -821,7 +821,7 @@
     cursor:pointer;
     text-align:center;
   }
-  .rub-tile .rub-icon{width:44px;height:44px;font-size:22px;}
+  .rub-tile .rub-icon{width:58px;height:58px;font-size:28px;}
   .rub-tile .name{font-size:12px; font-weight:700; line-height:1.25;}
   .rub-tile.add-tile{
     border-style:dashed;
@@ -831,7 +831,7 @@
   .rub-tile.add-tile .rub-icon{
     background:var(--card-2);
     color:var(--text-dim);
-    font-size:22px;
+    font-size:28px;
   }
 
   .selected-rub-banner{
@@ -975,7 +975,9 @@
     { id:"taxe_communale", nom:"Taxe communale",                  icone:"🏛️", couleur:"#9b6bd6", parDefautLocataire:false },
     { id:"droit_sol",      nom:"Droit de sol",                    icone:"📍", couleur:"#e0578a", parDefautLocataire:false },
     { id:"lavage",         nom:"Lavage",                          icone:"🧽", couleur:"#35b4c9", parDefautLocataire:null }, // pas coché par défaut
-    { id:"entretien",      nom:"Entretien (pneu, panne, vidange)",icone:"🔧", couleur:"#c9a227", parDefautLocataire:false }
+    { id:"entretien",      nom:"Entretien (pneu, panne, vidange)",icone:"🔧", couleur:"#c9a227", parDefautLocataire:false },
+    { id:"contraventions", nom:"Contraventions",                  icone:"🚨", couleur:"#d64545", parDefautLocataire:null }, // Sprint 6A : pas coché par défaut
+    { id:"nourriture",     nom:"Nourriture au travail",           icone:"🍲", couleur:"#6fcf5b", parDefautLocataire:null }  // Sprint 6A : pas coché par défaut
   ];
 
   var SEGMENTS = [
@@ -1091,6 +1093,21 @@
     };
   }
 
+  // Sprint 6A : les rubriques préconfigurées ajoutées après le premier lancement d'un
+  // utilisateur (ici Contraventions et Nourriture au travail) ne sont créées qu'à l'onboarding
+  // (voir plus bas) — sans ce rattrapage, un utilisateur déjà en cours d'usage ne les verrait
+  // jamais apparaître, même dans Réglages. On les ajoute donc à la volée, désactivées par
+  // défaut (comme décidé), à quiconque a déjà une liste de rubriques mais ne les a pas encore.
+  function ajouterNouvellesRubriquesDefaut(config){
+    if(!config || !config.rubriques || config.rubriques.length === 0) return; // onboarding pas encore fait, rien à rattraper
+    var idsExistants = {};
+    config.rubriques.forEach(function(r){ idsExistants[r.id] = true; });
+    RUBRIQUES_DEFAUT.forEach(function(r){
+      if(idsExistants[r.id]) return;
+      config.rubriques.push({ id:r.id, nom:r.nom, icone:r.icone, couleur:r.couleur, actif:false, perso:false });
+    });
+  }
+
   function loadState(){
     try{
       var raw = localStorage.getItem(STORAGE_KEY);
@@ -1104,6 +1121,7 @@
       parsed.dernierMontant = parsed.dernierMontant || {};
       if(parsed.objectif === undefined) parsed.objectif = null;
       parsed.meta = Object.assign({}, base.meta, parsed.meta || {});
+      ajouterNouvellesRubriquesDefaut(parsed.config);
       return parsed;
     }catch(e){
       return defaultState();
@@ -1120,6 +1138,7 @@
     out.dernierMontant = parsed.dernierMontant || {};
     out.objectif = parsed.objectif !== undefined ? parsed.objectif : null;
     out.meta = Object.assign({}, base.meta, parsed.meta || {});
+    ajouterNouvellesRubriquesDefaut(out.config);
     return out;
   }
 
@@ -1167,6 +1186,34 @@
   }
 
   /* ---------- Utilitaires ---------- */
+
+  // Sprint 6A : ordre d'affichage des charges déjà enregistrées — la plus grosse dépense en
+  // haut, Dioulatchai toujours en tête quel que soit son montant. Ne s'applique qu'aux charges
+  // déjà saisies (liste du jour, historique, récapitulatifs) — jamais à la grille de choix de
+  // rubrique à l'ajout d'une charge, qui doit rester dans un ordre stable pour ne pas déplacer
+  // les pastilles sous les doigts pendant la saisie.
+  function trierChargesParImportance(charges){
+    return charges.slice().sort(function(a, b){
+      var aDioul = a.rubriqueId === "dioulatchai";
+      var bDioul = b.rubriqueId === "dioulatchai";
+      if(aDioul && !bDioul) return -1;
+      if(bDioul && !aDioul) return 1;
+      return b.montant - a.montant;
+    });
+  }
+
+  // Même règle que trierChargesParImportance, mais pour les récapitulatifs par rubrique
+  // (Mon état, Partager) où on trie des identifiants de rubrique par total cumulé plutôt que
+  // des charges individuelles par montant.
+  function trierRubriqueIdsParImportance(totauxParId){
+    return Object.keys(totauxParId).sort(function(a, b){
+      var aDioul = a === "dioulatchai";
+      var bDioul = b === "dioulatchai";
+      if(aDioul && !bDioul) return -1;
+      if(bDioul && !aDioul) return 1;
+      return totauxParId[b] - totauxParId[a];
+    });
+  }
 
   function formatFCFA(n){
     n = Math.round(Number(n) || 0);
@@ -1230,6 +1277,11 @@
     var first = new Date(d.getFullYear(), d.getMonth(), 1);
     var last = new Date(d.getFullYear(), d.getMonth()+1, 0);
     return { startDate:first, endDate:last, start:dateToKey(first), end:dateToKey(last) };
+  }
+
+  // Sprint 6A : Mon état gagne la même bascule Jour/Semaine/Mois que l'écran Partager.
+  function getDayRange(d){
+    return { startDate:d, endDate:d, start:dateToKey(d), end:dateToKey(d) };
   }
 
   // Agrège les jours ayant des données dans l'intervalle [range.start, range.end] (bornes incluses).
@@ -1770,13 +1822,14 @@
       : formatFCFA(recette);
     var chargesBlocValeur = formatFCFA(totalCharges);
 
-    var epargneIcone = "🎯";
+    // Sprint 6A : le bloc Épargne garde toujours son icône générique (tirelire), qu'un
+    // objectif soit actif ou non — l'icône propre à chaque modèle (moto, famille...) reste
+    // réservée à l'onglet Objectif, pas dupliquée ici.
+    var epargneIcone = "🐷";
     var epargneBlocValeur;
     if(!objectifActif){
       epargneBlocValeur = '<span class="block3-empty">Aucun</span>';
     } else {
-      var modeleActifBloc = MODELES_OBJECTIF.find(function(m){ return m.id === objectifActif.modele; });
-      if(modeleActifBloc) epargneIcone = modeleActifBloc.emoji;
       if(objectifActif.montantCible){
         var pctBloc = Math.min(100, Math.round(computeEpargneObjectif() / objectifActif.montantCible * 100));
         epargneBlocValeur = pctBloc + "%";
@@ -1905,18 +1958,20 @@
   /* ===================== MON ÉTAT (semaine / mois + historique) ===================== */
 
   function renderEtat(){
-    var periode = ui.etatPeriode === "mois" ? "mois" : "semaine";
-    var range = periode === "mois" ? getMonthRange(new Date()) : getWeekRange(new Date());
+    var periode = (ui.etatPeriode === "mois" || ui.etatPeriode === "jour") ? ui.etatPeriode : "semaine";
+    var range = periode === "mois" ? getMonthRange(new Date())
+      : periode === "jour" ? getDayRange(new Date())
+      : getWeekRange(new Date());
     var stats = computeEtatStats(range);
     var enPerte = stats.soldeCumule < 0;
 
     var periodLabel = periode === "mois"
       ? capitalize(MOIS_FR[new Date().getMonth()]) + " " + new Date().getFullYear()
+      : periode === "jour"
+      ? capitalize(formatDateLongue(new Date()))
       : "Du " + formatDateCourte(range.startDate) + " au " + formatDateCourte(range.endDate);
 
-    var rubIds = Object.keys(stats.parRubrique).sort(function(a,b){
-      return stats.parRubrique[b] - stats.parRubrique[a];
-    });
+    var rubIds = trierRubriqueIdsParImportance(stats.parRubrique);
     var rubriqueRows = rubIds.map(function(id){
       var r = state.config.rubriques.find(function(x){return x.id===id;});
       var nom = r ? r.nom : "Rubrique supprimée";
@@ -1949,11 +2004,20 @@
         '</div>';
     }).join("");
 
-    var joursSection = '' +
+    var joursSection = periode === "jour" ? "" : '' +
       '<div class="charges-section">' +
         '<div class="charges-title">Jours enregistrés</div>' +
         (joursRows || '<div class="empty-state">Aucun jour archivé pour l\'instant.</div>') +
       '</div>';
+
+    // Sprint 6A : pour « Jour », les libellés perdent leur suffixe « totale(s)/cumulé » (un seul
+    // jour, pas une somme) et la Moyenne/jour disparaît (redondante avec le solde du jour seul) —
+    // même logique que l'écran Partager pour son mode Jour.
+    var labelSolde = periode === "jour" ? "Solde net du jour" : "Solde net cumulé";
+    var labelRecette = periode === "jour" ? "Recette" : "Recette totale";
+    var labelCharges = periode === "jour" ? "Charges" : "Charges totales";
+    var moyenneItem = periode === "jour" ? "" :
+      '<div class="solde-sub-item"><div class="k">Moyenne / jour</div><div class="v">'+formatFCFA(stats.moyenne)+'</div></div>';
 
     var html = '' +
       '<div class="home-header">' +
@@ -1963,17 +2027,18 @@
         '</div>' +
       '</div>' +
       '<div class="seg-toggle">' +
+        '<button class="seg-btn '+(periode==="jour"?"active":"")+'" data-periode="jour">Jour</button>' +
         '<button class="seg-btn '+(periode==="semaine"?"active":"")+'" data-periode="semaine">Semaine</button>' +
         '<button class="seg-btn '+(periode==="mois"?"active":"")+'" data-periode="mois">Mois</button>' +
       '</div>' +
       '<div class="etat-period-label">'+esc(periodLabel)+'</div>' +
       '<div class="solde-card '+(enPerte?"perte":"")+'" style="margin-top:14px;">' +
-        '<p class="solde-label">Solde net cumulé</p>' +
+        '<p class="solde-label">'+labelSolde+'</p>' +
         '<p class="solde-value '+(enPerte?"neg":"")+'">'+formatFCFA(stats.soldeCumule)+'</p>' +
         '<div class="solde-sub">' +
-          '<div class="solde-sub-item"><div class="k">Recette totale</div><div class="v">'+formatFCFA(stats.recetteTotale)+'</div></div>' +
-          '<div class="solde-sub-item"><div class="k">Charges totales</div><div class="v">'+formatFCFA(stats.chargesTotales)+'</div></div>' +
-          '<div class="solde-sub-item"><div class="k">Moyenne / jour</div><div class="v">'+formatFCFA(stats.moyenne)+'</div></div>' +
+          '<div class="solde-sub-item"><div class="k">'+labelRecette+'</div><div class="v">'+formatFCFA(stats.recetteTotale)+'</div></div>' +
+          '<div class="solde-sub-item"><div class="k">'+labelCharges+'</div><div class="v">'+formatFCFA(stats.chargesTotales)+'</div></div>' +
+          moyenneItem +
         '</div>' +
       '</div>' +
       rubriqueSection +
@@ -2521,7 +2586,7 @@
     if(jour.charges.length === 0){
       chargesHtml = '<div class="empty-state">Aucune charge enregistrée '+entryDateLabel()+'.</div>';
     } else {
-      chargesHtml = jour.charges.slice().reverse().map(function(c){
+      chargesHtml = trierChargesParImportance(jour.charges).map(function(c){
         var r = state.config.rubriques.find(function(x){return x.id===c.rubriqueId;});
         var nom = r ? r.nom : "Rubrique supprimée";
         var icone = r ? r.icone : "🏷️";
@@ -2615,7 +2680,7 @@
 
     var chargesHtml = j.charges.length === 0
       ? '<div class="empty-state">Aucune charge ce jour-là.</div>'
-      : j.charges.map(function(c){
+      : trierChargesParImportance(j.charges).map(function(c){
           var r = state.config.rubriques.find(function(x){return x.id===c.rubriqueId;});
           var nom = r ? r.nom : "Rubrique supprimée";
           var icone = r ? r.icone : "🏷️";
@@ -3437,9 +3502,7 @@
     ctx.fillText("Charges par rubrique", pad, y);
     y += 50;
 
-    var rubIds = Object.keys(data.parRubrique).sort(function(a,b){
-      return data.parRubrique[b] - data.parRubrique[a];
-    });
+    var rubIds = trierRubriqueIdsParImportance(data.parRubrique);
     var maxRows = 6;
     if(rubIds.length === 0){
       ctx.fillStyle = "#666c78";
