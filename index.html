@@ -473,6 +473,43 @@
   .recette-btn .lbl .t2{color:var(--text-dim); font-size:13px; margin-top:2px;}
   .recette-btn.set{border-color:var(--green);}
 
+  /* ---------- Sprint 5B : 3 blocs Recette / Charges / Épargne ---------- */
+  .blocks3-row{
+    margin:16px 20px 0;
+    display:flex;
+    gap:10px;
+  }
+  .block3{
+    flex:1;
+    min-width:0;
+    background:var(--card);
+    border:2px solid var(--border);
+    border-radius:var(--radius);
+    padding:14px 6px 12px;
+    text-align:center;
+    cursor:pointer;
+  }
+  .block3.set{border-color:var(--green);}
+  .block3-ic{font-size:22px; line-height:1;}
+  .block3-v{
+    font-size:15px;
+    font-weight:800;
+    margin-top:7px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    padding:0 2px;
+  }
+  .block3-empty{color:var(--text-faint); font-weight:600; font-size:13px;}
+  .block3-l{
+    font-size:11px;
+    font-weight:700;
+    color:var(--text-dim);
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    margin-top:3px;
+  }
+
   .charges-section{
     margin:22px 20px 0;
   }
@@ -972,7 +1009,7 @@
   /* ---------- État ---------- */
 
   var state = null;
-  var ui = { screen:"loading", modal:null, modalData:{}, tab:"aujourdhui", etatPeriode:"semaine", objStep:1, objData:{}, objEditing:false, overlay:null, locked:false, lockPin:"", partagerPeriode:"jour", accueilDate:null };
+  var ui = { screen:"loading", modal:null, modalData:{}, modalReturnTo:null, tab:"aujourdhui", etatPeriode:"semaine", objStep:1, objData:{}, objEditing:false, overlay:null, locked:false, lockPin:"", partagerPeriode:"jour", accueilDate:null };
 
   // ---------- Sprint 5A : bouton retour du téléphone (navigation, pas de sortie de l'app) ----------
   // Sans ceci, le bouton/geste "retour" du téléphone quitte directement l'application dès qu'on
@@ -1008,7 +1045,12 @@
   }
 
   function handleBackNavigation(){
-    if(ui.modal){ ui.modal = null; ui.modalData = {}; render(); return; }
+    if(ui.modal){
+      if(ui.modalReturnTo){ ui.modal = ui.modalReturnTo; ui.modalData = {}; }
+      else { ui.modal = null; ui.modalData = {}; }
+      render();
+      return;
+    }
     if(ui.overlay){ ui.overlay = null; render(); return; }
     if(ui.tab === "objectif" && !(state.objectif && state.objectif.actif) && (ui.objStep||1) > 1){
       ui.objStep -= 1; render(); return;
@@ -1636,6 +1678,12 @@
     }
     var cancel = document.getElementById("perso-cancel");
     if(cancel) cancel.addEventListener("click", function(){
+      if(fromChargeFlow && ui.modalReturnTo){
+        ui.modal = ui.modalReturnTo;
+        ui.modalData = {};
+        render();
+        return;
+      }
       ui.modal = null;
       ui.modalData = {};
       onDone();
@@ -1690,6 +1738,10 @@
 
     var seg = SEGMENTS.find(function(s){return s.id===state.config.segment;});
 
+    // Sprint 5B : le solde net reste la seule grosse information du haut de l'écran, inchangée
+    // (F4). Le détail Recette/Charges qui s'affichait dans cette carte est retiré d'ici : il
+    // vit maintenant dans les 3 blocs juste en dessous, pour ne plus afficher les mêmes
+    // montants deux fois (remarque terrain).
     var soldeHtml;
     if(recette === null){
       soldeHtml = '' +
@@ -1703,44 +1755,54 @@
           '<p class="solde-label">Solde net '+(estAujourdhui?"du jour":"— "+esc(formatDateCourte(new Date(key+"T00:00:00"))))+'</p>' +
           '<p class="solde-value '+(enPerte?"neg":"")+'">'+formatFCFA(solde)+'</p>' +
           (enPerte ? '<div class="perte-banner">Jour à perte : '+formatFCFA(Math.abs(solde))+'</div>' : '') +
-          '<div class="solde-sub">' +
-            '<div class="solde-sub-item"><div class="k">Recette</div><div class="v">'+formatFCFA(recette)+'</div></div>' +
-            '<div class="solde-sub-item"><div class="k">Charges</div><div class="v">'+formatFCFA(totalCharges)+'</div></div>' +
-          '</div>' +
           (epargneJour > 0
             ? '<div class="disponible-line">Disponible aujourd\'hui : <b>'+formatFCFA(disponible)+'</b><br>('+formatFCFA(epargneJour)+' mis de côté pour « '+esc(objectifActif.nom)+' »)</div>'
             : '') +
         '</div>';
     }
 
-    var recetteBtnHtml = recette === null
-      ? '<div class="recette-btn" id="btn-recette"><span class="ic">💰</span><div class="lbl"><div class="t1">Recette du jour</div><div class="t2">Montant encaissé '+entryDateLabel()+'</div></div></div>'
-      : '<div class="recette-btn set" id="btn-recette"><span class="ic">💰</span><div class="lbl"><div class="t1">Recette du jour : '+formatFCFA(recette)+'</div><div class="t2">Toucher pour modifier</div></div></div>';
+    // Sprint 5B : 3 blocs de taille égale — Recette / Charges / Épargne — qui remplacent le
+    // bouton Recette, la liste complète des charges et le bloc Objectif d'avant. Chacun
+    // n'affiche qu'une icône et un montant ; le détail complet s'ouvre au toucher (« le point du
+    // jour en 30 secondes », principe directeur du cahier des charges).
+    var recetteBlocValeur = recette === null
+      ? '<span class="block3-empty">À saisir</span>'
+      : formatFCFA(recette);
+    var chargesBlocValeur = formatFCFA(totalCharges);
 
-    var chargesHtml;
-    if(jour.charges.length === 0){
-      chargesHtml = '<div class="empty-state">Aucune charge enregistrée '+entryDateLabel()+'.</div>';
+    var epargneIcone = "🎯";
+    var epargneBlocValeur;
+    if(!objectifActif){
+      epargneBlocValeur = '<span class="block3-empty">Aucun</span>';
     } else {
-      chargesHtml = jour.charges.slice().reverse().map(function(c){
-        var r = state.config.rubriques.find(function(x){return x.id===c.rubriqueId;});
-        var nom = r ? r.nom : "Rubrique supprimée";
-        var icone = r ? r.icone : "🏷️";
-        var couleur = r ? r.couleur : "#7f8c9a";
-        return '' +
-          '<div class="charge-row">' +
-            '<div class="rub-icon" style="background:'+couleur+'">'+icone+'</div>' +
-            '<div class="charge-info"><div class="n">'+esc(nom)+'</div></div>' +
-            '<div class="charge-amount">'+formatFCFA(c.montant)+'</div>' +
-            '<button class="charge-del" data-del-charge="'+c.id+'">✕</button>' +
-          '</div>';
-      }).join("");
+      var modeleActifBloc = MODELES_OBJECTIF.find(function(m){ return m.id === objectifActif.modele; });
+      if(modeleActifBloc) epargneIcone = modeleActifBloc.emoji;
+      if(objectifActif.montantCible){
+        var pctBloc = Math.min(100, Math.round(computeEpargneObjectif() / objectifActif.montantCible * 100));
+        epargneBlocValeur = pctBloc + "%";
+      } else {
+        epargneBlocValeur = formatFCFA(computeEpargneObjectif());
+      }
     }
 
-    // L'objectif actif reste visible en haut (jauge utile au quotidien, F5) ; l'invite à en créer
-    // un, elle, est reléguée plus bas et allégée — c'est un service optionnel, pas une étape du
-    // jour (remarque terrain : l'ancien emplacement le faisait passer pour obligatoire).
-    var objectifActifHtml = objectifActif ? renderObjectifDashboardCard() : "";
-    var objectifInviteHtml = objectifActif ? "" : renderObjectifInviteSubtle();
+    var blocsHtml = '' +
+      '<div class="blocks3-row">' +
+        '<div class="block3 '+(recette!==null?"set":"")+'" id="block-recette">' +
+          '<span class="block3-ic">💰</span>' +
+          '<div class="block3-v">'+recetteBlocValeur+'</div>' +
+          '<div class="block3-l">Recette</div>' +
+        '</div>' +
+        '<div class="block3" id="block-charges">' +
+          '<span class="block3-ic">🧾</span>' +
+          '<div class="block3-v">'+chargesBlocValeur+'</div>' +
+          '<div class="block3-l">Charges</div>' +
+        '</div>' +
+        '<div class="block3" id="block-epargne">' +
+          '<span class="block3-ic">'+epargneIcone+'</span>' +
+          '<div class="block3-v">'+epargneBlocValeur+'</div>' +
+          '<div class="block3-l">Épargne</div>' +
+        '</div>' +
+      '</div>';
 
     var dateLabelHtml = estAujourdhui
       ? esc(capitalize(formatDateLongue(new Date())))
@@ -1758,34 +1820,25 @@
         '</div>' +
       '</div>' +
       soldeHtml +
-      objectifActifHtml +
-      recetteBtnHtml +
-      '<div class="charges-section">' +
-        '<div class="charges-title">Charges '+(estAujourdhui?"d\'aujourd\'hui":"de ce jour")+'</div>' +
-        chargesHtml +
-      '</div>' +
-      objectifInviteHtml +
-      '<div class="fab-wrap"><button class="fab" id="btn-add-charge">＋</button></div>' +
+      blocsHtml +
       renderTabBarHtml("aujourdhui");
 
     app.innerHTML = html;
 
-    document.getElementById("btn-recette").addEventListener("click", function(){
+    document.getElementById("block-recette").addEventListener("click", function(){
       ui.modal = "recette";
       ui.modalData = { montant: recette !== null ? String(recette) : "" };
       renderModal();
     });
-    document.getElementById("btn-add-charge").addEventListener("click", function(){
-      ui.modal = "choix-rubrique";
+    document.getElementById("block-charges").addEventListener("click", function(){
+      ui.modalReturnTo = null;
+      ui.modal = "detail-charges";
       ui.modalData = {};
       renderModal();
     });
-    app.querySelectorAll("[data-del-charge]").forEach(function(node){
-      node.addEventListener("click", function(){
-        ui.modal = "confirm-suppr-charge";
-        ui.modalData = { chargeId: node.getAttribute("data-del-charge") };
-        renderModal();
-      });
+    document.getElementById("block-epargne").addEventListener("click", function(){
+      ui.tab = "objectif";
+      render();
     });
     var reglagesBtn = document.getElementById("btn-reglages");
     if(reglagesBtn) reglagesBtn.addEventListener("click", function(){
@@ -1801,16 +1854,6 @@
     var btnDateToday = document.getElementById("btn-date-today");
     if(btnDateToday) btnDateToday.addEventListener("click", function(){
       ui.accueilDate = null;
-      render();
-    });
-    var objCardActif = document.getElementById("objectif-dashboard-card");
-    if(objCardActif) objCardActif.addEventListener("click", function(){
-      ui.tab = "objectif";
-      render();
-    });
-    var objInvite = document.getElementById("objectif-invite-subtle");
-    if(objInvite) objInvite.addEventListener("click", function(){
-      ui.tab = "objectif";
       render();
     });
     attachTabBarEvents();
@@ -2268,6 +2311,7 @@
     else if(ui.modal === "montant-charge") sheetHtml = modalMontantCharge();
     else if(ui.modal === "perso-modal") sheetHtml = '<div class="modal-handle"></div>' + renderPersoForm("modal");
     else if(ui.modal === "confirm-suppr-charge") sheetHtml = modalConfirmSupprCharge();
+    else if(ui.modal === "detail-charges") sheetHtml = modalDetailCharges();
     else if(ui.modal === "changer-date") sheetHtml = modalChangerDate();
     else if(ui.modal === "jour-detail") sheetHtml = modalJourDetail();
     else if(ui.modal === "confirm-suppr-objectif") sheetHtml = modalConfirmSupprObjectif();
@@ -2291,6 +2335,7 @@
     else if(ui.modal === "montant-charge") attachModalMontantChargeEvents();
     else if(ui.modal === "perso-modal") attachPersoFormEvents(function(){ renderModal(); }, true);
     else if(ui.modal === "confirm-suppr-charge") attachModalConfirmSupprChargeEvents();
+    else if(ui.modal === "detail-charges") attachModalDetailChargesEvents();
     else if(ui.modal === "changer-date") attachModalChangerDateEvents();
     else if(ui.modal === "jour-detail") attachModalJourDetailEvents();
     else if(ui.modal === "confirm-suppr-objectif") attachModalConfirmSupprObjectifEvents();
@@ -2304,6 +2349,15 @@
   }
 
   function closeModal(){
+    // Sprint 5B : quand une modale a été ouverte depuis le détail « Charges » (ajout ou
+    // suppression), on revient au détail plutôt que de tout fermer d'un coup — modalReturnTo
+    // porte ce lien tant qu'on reste dans ce sous-parcours (voir bloc Charges de l'accueil).
+    if(ui.modalReturnTo){
+      ui.modal = ui.modalReturnTo;
+      ui.modalData = {};
+      render();
+      return;
+    }
     ui.modal = null;
     ui.modalData = {};
     renderModal();
@@ -2451,6 +2505,68 @@
       saveState();
       closeModal();
       renderAccueil();
+    });
+  }
+
+  // Sprint 5B : détail du bloc « Charges » de l'accueil — la liste complète du jour (comme
+  // avant, directement sur l'accueil), avec ajout et suppression, maintenant ouverte depuis le
+  // bloc plutôt qu'affichée en permanence sur l'écran principal.
+  function modalDetailCharges(){
+    var key = currentEntryKey();
+    var jour = ensureJour(key);
+    var totalCharges = jour.charges.reduce(function(s,c){ return s + c.montant; }, 0);
+    var estAujourdhui = key === todayKey();
+
+    var chargesHtml;
+    if(jour.charges.length === 0){
+      chargesHtml = '<div class="empty-state">Aucune charge enregistrée '+entryDateLabel()+'.</div>';
+    } else {
+      chargesHtml = jour.charges.slice().reverse().map(function(c){
+        var r = state.config.rubriques.find(function(x){return x.id===c.rubriqueId;});
+        var nom = r ? r.nom : "Rubrique supprimée";
+        var icone = r ? r.icone : "🏷️";
+        var couleur = r ? r.couleur : "#7f8c9a";
+        return '' +
+          '<div class="charge-row">' +
+            '<div class="rub-icon" style="background:'+couleur+'">'+icone+'</div>' +
+            '<div class="charge-info"><div class="n">'+esc(nom)+'</div></div>' +
+            '<div class="charge-amount">'+formatFCFA(c.montant)+'</div>' +
+            '<button class="charge-del" data-del-charge="'+c.id+'">✕</button>' +
+          '</div>';
+      }).join("");
+    }
+
+    return '' +
+      '<div class="modal-handle"></div>' +
+      '<h2 class="modal-title">Charges '+(estAujourdhui?"d\'aujourd\'hui":"de ce jour")+'</h2>' +
+      '<p class="modal-sub">Total : '+formatFCFA(totalCharges)+'</p>' +
+      chargesHtml +
+      '<div style="height:14px"></div>' +
+      '<button class="btn btn-primary" id="detail-charges-add">＋ Ajouter une charge</button>' +
+      '<div style="height:10px"></div>' +
+      '<button class="btn btn-ghost" id="detail-charges-close">Fermer</button>';
+  }
+
+  function attachModalDetailChargesEvents(){
+    document.querySelectorAll("[data-del-charge]").forEach(function(node){
+      node.addEventListener("click", function(){
+        ui.modalReturnTo = "detail-charges";
+        ui.modal = "confirm-suppr-charge";
+        ui.modalData = { chargeId: node.getAttribute("data-del-charge") };
+        renderModal();
+      });
+    });
+    var addBtn = document.getElementById("detail-charges-add");
+    if(addBtn) addBtn.addEventListener("click", function(){
+      ui.modalReturnTo = "detail-charges";
+      ui.modal = "choix-rubrique";
+      ui.modalData = {};
+      renderModal();
+    });
+    var close = document.getElementById("detail-charges-close");
+    if(close) close.addEventListener("click", function(){
+      ui.modalReturnTo = null;
+      closeModal();
     });
   }
 
