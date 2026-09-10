@@ -513,13 +513,25 @@
   .recette-btn .lbl .t2{color:var(--text-dim); font-size:13px; margin-top:2px;}
   .recette-btn.set{border-color:var(--green);}
 
-  /* ---------- Sprint 5B : 3 blocs Recette / Charges / Épargne ---------- */
-  /* Sprint 7A : les 3 blocs occupent désormais l'essentiel de l'espace restant de l'accueil
-     (flex:1 sur la rangée, qui est un enfant direct de #app en colonne flex) — le panneau
-     "Mes épargnes" et le lien objectif qui vivaient sous ces blocs ont été retirés (déplacés
-     vers Mon état / vue Jour, voir renderEtat). */
-  .blocks3-row{
+  /* ---------- Sprint 5B/7A/8 : Entrée du jour / Charges / Épargne ---------- */
+  /* Sprint 7A : ces blocs occupent l'essentiel de l'espace restant de l'accueil (flex:1 sur un
+     enfant direct de #app en colonne flex) — le panneau "Mes épargnes" et le lien objectif qui
+     vivaient dessous ont été retirés (déplacés vers Mon état / vue Jour, voir renderEtat).
+     Sprint 8 (point 1) : nouvelle disposition — Entrée du jour occupe seule une case pleine
+     largeur en haut (`.blocks-stack` en colonne flex, `.block3` s'étire alors naturellement sur
+     toute la largeur), Charges et Épargne se partagent une rangée juste en dessous
+     (`.blocks2-row`). Les deux rangées se partagent l'espace vertical disponible à égalité
+     (flex:1 chacune), comme le faisaient les 3 blocs à égalité avant ce sprint. La case
+     Disponible aujourd'hui (`.solde-card`) est désormais affichée après ce bloc plutôt
+     qu'avant — voir renderAccueil, aucun changement de style. */
+  .blocks-stack{
     margin:16px 20px 0;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    flex:1;
+  }
+  .blocks2-row{
     display:flex;
     gap:10px;
     flex:1;
@@ -1115,18 +1127,19 @@
     { id:"apprenti",       nom:"Apprenti (receveur)",             icone:"🧑‍🔧", couleur:"#5b7fc9", parDefautLocataire:null }  // Sprint 7A : dispo pour tous, pensée surtout pour Gbaka — pas cochée par défaut
   ];
 
-  // Sprint 7A : 6 activités (jargon local d'abord, terme standard entre parenthèses), grille
-  // 2 colonnes × 3 lignes à l'onboarding et dans Réglages. Chaque activité a désormais une
-  // couleur de pastille et un pictogramme SVG plat dédié (voir vehicleIconSvg plus bas) à la
-  // place de l'ancien emoji — utilisés à l'onboarding, en-tête de l'accueil et Réglages. Le
-  // champ "titre" alimente le titre dynamique de l'accueil (F5, remplace "Faire le point").
+  // Sprint 8 (point 2) : retour aux emoji d'origine pour les 6 activités (le Sprint 7A les avait
+  // remplacés par des pictogrammes SVG plats — VEHICLE_ICON_PATHS/vehicleIconSvg/renderSegIcon
+  // laissés en l'état plus bas, code mort, plutôt que supprimés). Grille 2 colonnes × 3 lignes à
+  // l'onboarding et dans Réglages. Le champ "titre" alimente le titre dynamique de l'accueil (F5,
+  // remplace "Faire le point"). "couleur" n'est plus utilisée pour l'affichage courant (elle ne
+  // servait qu'aux pictogrammes SVG) mais reste sur chaque entrée, sans effet, par prudence.
   var SEGMENTS = [
-    { id:"taxi_compteur", nom:"Woyo (Taxi-compteur)",         titre:"Mon Woyo",        couleur:"#e5533c" },
-    { id:"wow",           nom:"Waren (Wôrô-wôrô)",            titre:"Mon Waren",       couleur:"#9b6bd6" },
-    { id:"gbaka",         nom:"Gbaka (mini-car)",             titre:"Mon Gbaka",       couleur:"#4c8bf5" },
-    { id:"vtc_yango",     nom:"VTC (Yango)",                  titre:"Ma VTC",          couleur:"#34b37e" },
-    { id:"trois_roues",   nom:"Trois roues (tricycle)",       titre:"Mon trois-roues", couleur:"#c9a227" },
-    { id:"moto_taxi",     nom:"Moto-taxi (homme et livraison)", titre:"Ma moto",       couleur:"#f5a623" }
+    { id:"taxi_compteur", nom:"Woyo (Taxi-compteur)",         titre:"Mon Woyo",        emoji:"🚕",  couleur:"#e5533c" },
+    { id:"wow",           nom:"Waren (Wôrô-wôrô)",            titre:"Mon Waren",       emoji:"🚗",  couleur:"#9b6bd6" },
+    { id:"gbaka",         nom:"Gbaka (mini-car)",             titre:"Mon Gbaka",       emoji:"🚐",  couleur:"#4c8bf5" },
+    { id:"vtc_yango",     nom:"VTC",                          titre:"Ma VTC",          emoji:"📱",  couleur:"#34b37e" },
+    { id:"trois_roues",   nom:"Trois roues (tricycle)",       titre:"Mon trois-roues", emoji:"🛺",  couleur:"#c9a227" },
+    { id:"moto_taxi",     nom:"Moto-taxi (homme et livraison)", titre:"Ma moto",       emoji:"🏍️", couleur:"#f5a623" }
   ];
 
   // Sprint 7A : pictogrammes plats en SVG inline, une silhouette par véhicule sur une pastille
@@ -1918,7 +1931,7 @@
     var cards = SEGMENTS.map(function(s){
       var sel = cfg.segment === s.id ? "selected" : "";
       return '<div class="choice-card '+sel+'" data-segment="'+s.id+'">' +
-        renderSegIcon(s, 60, 34) + '<span>'+esc(s.nom)+'</span></div>';
+        '<span class="emoji">'+s.emoji+'</span><span>'+esc(s.nom)+'</span></div>';
     }).join("");
 
     // Sprint 6B : cet écran (4 cartes + un bouton) est nettement plus court que l'espace
@@ -2277,10 +2290,11 @@
 
     var seg = SEGMENTS.find(function(s){return s.id===state.config.segment;});
 
-    // Sprint 5B : le chiffre principal reste la seule grosse information du haut de l'écran
-    // (F4). Le détail Recette/Charges qui s'affichait dans cette carte est retiré d'ici : il
-    // vit maintenant dans les 3 blocs juste en dessous, pour ne plus afficher les mêmes
-    // montants deux fois (remarque terrain).
+    // Sprint 5B : le chiffre principal reste la seule grosse information de cette carte (F4). Le
+    // détail Recette/Charges qui s'y affichait a été retiré : il vit dans les blocs Entrée du
+    // jour / Charges / Épargne, pour ne plus afficher les mêmes montants deux fois (remarque
+    // terrain). Sprint 8 (point 1) : cette carte est désormais affichée en dernier, sous ces
+    // blocs (voir l'assemblage du html plus bas) — style inchangé, simplement déplacée.
     var soldeHtml;
     if(recette === null){
       soldeHtml = '' +
@@ -2321,22 +2335,28 @@
 
     // Sprint 7A (point 5) : le libellé affiché du montant principal du jour devient "Entrée du
     // jour" (le nom interne "Recette" ne change pas dans le code — jour.recette, etc.).
+    // Sprint 8 (point 1) : Entrée du jour occupe seule une case pleine largeur en haut (contenu
+    // centré, icône/montant/libellé — même mise en page que les autres cases), Charges et
+    // Épargne se partagent une rangée juste en dessous. Même contenu, même comportement au tap
+    // et même logique de bordure verte (.set) qu'avant — seule la disposition change.
     var blocsHtml = '' +
-      '<div class="blocks3-row">' +
+      '<div class="blocks-stack">' +
         '<div class="block3 '+(recette!==null?"set":"")+'" id="block-recette">' +
           '<span class="block3-ic">💰</span>' +
           '<div class="block3-v">'+recetteBlocValeur+'</div>' +
           '<div class="block3-l">Entrée du jour</div>' +
         '</div>' +
-        '<div class="block3" id="block-charges">' +
-          '<span class="block3-ic">🧾</span>' +
-          '<div class="block3-v">'+chargesBlocValeur+'</div>' +
-          '<div class="block3-l">Charges</div>' +
-        '</div>' +
-        '<div class="block3" id="block-epargne">' +
-          '<span class="block3-ic">'+epargneIcone+'</span>' +
-          '<div class="block3-v">'+epargneBlocValeur+'</div>' +
-          '<div class="block3-l">Épargne</div>' +
+        '<div class="blocks2-row">' +
+          '<div class="block3" id="block-charges">' +
+            '<span class="block3-ic">🧾</span>' +
+            '<div class="block3-v">'+chargesBlocValeur+'</div>' +
+            '<div class="block3-l">Charges</div>' +
+          '</div>' +
+          '<div class="block3" id="block-epargne">' +
+            '<span class="block3-ic">'+epargneIcone+'</span>' +
+            '<div class="block3-v">'+epargneBlocValeur+'</div>' +
+            '<div class="block3-l">Épargne</div>' +
+          '</div>' +
         '</div>' +
       '</div>';
 
@@ -2351,9 +2371,10 @@
       : '<div class="home-date-today-link" id="btn-date-today">↺ Revenir à aujourd\'hui</div>';
 
     // Sprint 7A (point 9) : titre dynamique selon l'activité choisie à l'onboarding (remplace
-    // le titre statique "Faire le point"), avec le pictogramme SVG de l'activité (point 4).
+    // le titre statique "Faire le point"). Sprint 8 (point 2) : icône = emoji d'origine de
+    // l'activité (remplace le pictogramme SVG du Sprint 7A).
     var titreAccueil = seg ? seg.titre : "Mon activité";
-    var iconTitreHtml = seg ? renderSegIcon(seg, 30, 17) : "";
+    var iconTitreHtml = seg ? esc(seg.emoji) : "";
 
     var html = '' +
       '<div class="home-header">' +
@@ -2366,8 +2387,8 @@
           '<button class="icon-btn" id="btn-reglages" aria-label="Réglages">⚙️</button>' +
         '</div>' +
       '</div>' +
-      soldeHtml +
       blocsHtml +
+      soldeHtml +
       renderTabBarHtml("aujourdhui");
 
     app.innerHTML = html;
@@ -3757,7 +3778,7 @@
     var segCards = SEGMENTS.map(function(s){
       var sel = cfg.segment === s.id ? "selected" : "";
       return '<div class="choice-card '+sel+'" data-reg-segment="'+s.id+'">' +
-        renderSegIcon(s, 56, 32) + '<span>'+esc(s.nom)+'</span></div>';
+        '<span class="emoji">'+s.emoji+'</span><span>'+esc(s.nom)+'</span></div>';
     }).join("");
 
     var isLoc = cfg.statutVehicule === "locataire";
