@@ -11,8 +11,10 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Trépor">
 <link rel="manifest" href="manifest.json">
-<link rel="icon" href="icon-512.png">
-<link rel="apple-touch-icon" href="icon-512.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
   :root{
     --bg:#11141a;
@@ -121,6 +123,16 @@
     cursor:pointer;
   }
   .choice-card .emoji{font-size:60px;}
+  /* Sprint 7A : pastille colorée + pictogramme SVG pour les 6 activités (remplace l'emoji nu
+     dans les grilles de choix — onboarding et Réglages) et dans l'en-tête de l'accueil. */
+  .seg-icon{
+    border-radius:50%;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+  }
+  .choice-card .seg-icon{ margin-bottom:2px; }
   .choice-card.selected{
     border-color:var(--accent);
     background:linear-gradient(180deg, rgba(245,166,35,.16), rgba(245,166,35,.06));
@@ -385,9 +397,9 @@
     display:flex;
     align-items:center;
     gap:7px;
-    color:var(--text-dim);
-    font-size:14px;
-    font-weight:600;
+    color:var(--text);
+    font-size:20px;
+    font-weight:800;
     text-transform:capitalize;
     cursor:pointer;
     text-align:left;
@@ -502,40 +514,51 @@
   .recette-btn.set{border-color:var(--green);}
 
   /* ---------- Sprint 5B : 3 blocs Recette / Charges / Épargne ---------- */
+  /* Sprint 7A : les 3 blocs occupent désormais l'essentiel de l'espace restant de l'accueil
+     (flex:1 sur la rangée, qui est un enfant direct de #app en colonne flex) — le panneau
+     "Mes épargnes" et le lien objectif qui vivaient sous ces blocs ont été retirés (déplacés
+     vers Mon état / vue Jour, voir renderEtat). */
   .blocks3-row{
     margin:16px 20px 0;
     display:flex;
     gap:10px;
+    flex:1;
   }
   .block3{
     flex:1;
     min-width:0;
+    min-height:140px;
     background:var(--card);
     border:2px solid var(--border);
     border-radius:var(--radius);
     padding:14px 6px 12px;
     text-align:center;
     cursor:pointer;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
   }
   .block3.set{border-color:var(--green);}
-  .block3-ic{font-size:22px; line-height:1;}
+  .block3-ic{font-size:36px; line-height:1;}
   .block3-v{
-    font-size:15px;
+    font-size:21px;
     font-weight:800;
-    margin-top:7px;
+    margin-top:10px;
     white-space:nowrap;
     overflow:hidden;
     text-overflow:ellipsis;
     padding:0 2px;
+    max-width:100%;
   }
-  .block3-empty{color:var(--text-faint); font-weight:600; font-size:13px;}
+  .block3-empty{color:var(--text-faint); font-weight:600; font-size:14px;}
   .block3-l{
-    font-size:11px;
+    font-size:12.5px;
     font-weight:700;
     color:var(--text-dim);
     text-transform:uppercase;
     letter-spacing:.03em;
-    margin-top:3px;
+    margin-top:6px;
   }
 
   .charges-section{
@@ -1039,8 +1062,12 @@
 
   var STORAGE_KEY = "trepor_state_v1";
 
+  // Sprint 7A : code d'accès test, demandé une seule fois avant l'onboarding. Comparaison
+  // insensible à la casse, espaces avant/après retirés (voir verifierCodeAcces).
+  var CODE_ACCES = "HKETCK";
+
   var RUBRIQUES_DEFAUT = [
-    { id:"dioulatchai",    nom:"Dioulatchai (part propriétaire)", icone:"🔑", couleur:"#f5a623", parDefautLocataire:true },
+    { id:"dioulatchai",    nom:"Recette (Dioulatchai)", icone:"🔑", couleur:"#f5a623", parDefautLocataire:true },
     { id:"carburant",      nom:"Carburant",                       icone:"⛽", couleur:"#e5533c", parDefautLocataire:false },
     { id:"assurance",      nom:"Assurance",                       icone:"🛡️", couleur:"#4c8bf5", parDefautLocataire:false },
     { id:"syndicat",       nom:"Syndicat",                        icone:"🤝", couleur:"#34b37e", parDefautLocataire:false },
@@ -1049,15 +1076,96 @@
     { id:"lavage",         nom:"Lavage",                          icone:"🧽", couleur:"#35b4c9", parDefautLocataire:null }, // pas coché par défaut
     { id:"entretien",      nom:"Entretien (pneu, panne, vidange)",icone:"🔧", couleur:"#c9a227", parDefautLocataire:false },
     { id:"contraventions", nom:"Contraventions",                  icone:"🚨", couleur:"#d64545", parDefautLocataire:null }, // Sprint 6A : pas coché par défaut
-    { id:"nourriture",     nom:"Nourriture au travail",           icone:"🍲", couleur:"#6fcf5b", parDefautLocataire:null }  // Sprint 6A : pas coché par défaut
+    { id:"nourriture",     nom:"Nourriture au travail",           icone:"🍲", couleur:"#6fcf5b", parDefautLocataire:null }, // Sprint 6A : pas coché par défaut
+    { id:"apprenti",       nom:"Apprenti (receveur)",             icone:"🧑‍🔧", couleur:"#5b7fc9", parDefautLocataire:null }  // Sprint 7A : dispo pour tous, pensée surtout pour Gbaka — pas cochée par défaut
   ];
 
+  // Sprint 7A : 6 activités (jargon local d'abord, terme standard entre parenthèses), grille
+  // 2 colonnes × 3 lignes à l'onboarding et dans Réglages. Chaque activité a désormais une
+  // couleur de pastille et un pictogramme SVG plat dédié (voir vehicleIconSvg plus bas) à la
+  // place de l'ancien emoji — utilisés à l'onboarding, en-tête de l'accueil et Réglages. Le
+  // champ "titre" alimente le titre dynamique de l'accueil (F5, remplace "Faire le point").
   var SEGMENTS = [
-    { id:"taxi_compteur", nom:"Taxi compteur", emoji:"🚕" },
-    { id:"wow",           nom:"Wôrô-wôrô",      emoji:"🚗" },
-    { id:"moto_taxi",     nom:"Moto-taxi",      emoji:"🏍️" },
-    { id:"vtc_yango",     nom:"VTC (Yango)",    emoji:"📱" }
+    { id:"taxi_compteur", nom:"Woyo (Taxi-compteur)",         titre:"Mon Woyo",        couleur:"#e5533c" },
+    { id:"wow",           nom:"Waren (Wôrô-wôrô)",            titre:"Mon Waren",       couleur:"#9b6bd6" },
+    { id:"gbaka",         nom:"Gbaka (mini-car)",             titre:"Mon Gbaka",       couleur:"#4c8bf5" },
+    { id:"vtc_yango",     nom:"VTC (Yango)",                  titre:"Ma VTC",          couleur:"#34b37e" },
+    { id:"trois_roues",   nom:"Trois roues (tricycle)",       titre:"Mon trois-roues", couleur:"#c9a227" },
+    { id:"moto_taxi",     nom:"Moto-taxi (homme et livraison)", titre:"Ma moto",       couleur:"#f5a623" }
   ];
+
+  // Sprint 7A : pictogrammes plats en SVG inline, une silhouette par véhicule sur une pastille
+  // de couleur (même esprit que les icônes de rubriques). Formes simples (rect/circle/lignes
+  // droites) pour rester lisibles en petite taille ; les "cutouts" (vitres, roues) sont peints
+  // dans la couleur de la pastille pour donner un effet 2 tons sans dégradé. Aucune photo, aucun
+  // rendu réaliste, aucune marque — juste une silhouette générique par catégorie de véhicule.
+  var VEHICLE_ICON_PATHS = {
+    // Sedan (Woyo / Waren / VTC) : même carrosserie de base, différenciée par un détail sur le toit.
+    taxi_compteur: function(c){ return '' +
+      '<path d="M4 15.4L4 13.2L6.2 13.2L8.4 8.6L15.6 8.6L17.8 13.2L20 13.2L20 15.4Z" fill="#fff"/>' +
+      '<rect x="10.8" y="6.6" width="2.4" height="2" fill="#fff"/>' +
+      '<path d="M9 12.6L9.8 9.6L14.2 9.6L15 12.6Z" fill="'+c+'"/>' +
+      '<circle cx="7.4" cy="15.9" r="1.5" fill="'+c+'"/>' +
+      '<circle cx="16.6" cy="15.9" r="1.5" fill="'+c+'"/>'; },
+    wow: function(c){ return '' +
+      '<path d="M4 15.4L4 13.2L6.2 13.2L8.4 8.6L15.6 8.6L17.8 13.2L20 13.2L20 15.4Z" fill="#fff"/>' +
+      '<rect x="9" y="9.8" width="2.6" height="2.4" fill="'+c+'"/>' +
+      '<rect x="12.4" y="9.8" width="2.6" height="2.4" fill="'+c+'"/>' +
+      '<circle cx="7.4" cy="15.9" r="1.5" fill="'+c+'"/>' +
+      '<circle cx="16.6" cy="15.9" r="1.5" fill="'+c+'"/>'; },
+    vtc_yango: function(c){ return '' +
+      '<path d="M4 15.4L4 13.2L6.2 13.2L8.4 8.6L15.6 8.6L17.8 13.2L20 13.2L20 15.4Z" fill="#fff"/>' +
+      '<rect x="9.6" y="6.2" width="4.8" height="2" fill="#fff"/>' +
+      '<rect x="10.2" y="6.7" width="3.6" height="0.9" fill="'+c+'"/>' +
+      '<path d="M9 12.6L9.8 9.6L14.2 9.6L15 12.6Z" fill="'+c+'"/>' +
+      '<circle cx="7.4" cy="15.9" r="1.5" fill="'+c+'"/>' +
+      '<circle cx="16.6" cy="15.9" r="1.5" fill="'+c+'"/>'; },
+    // Gbaka : van/minibus, carrosserie plus haute et carrée, rangée de vitres.
+    gbaka: function(c){ return '' +
+      '<path d="M3.4 15.4L3.4 9.4L4.6 8.2L18.4 8.2L19.6 9.4L19.6 15.4Z" fill="#fff"/>' +
+      '<rect x="5.2" y="10" width="2.6" height="2.4" fill="'+c+'"/>' +
+      '<rect x="8.6" y="10" width="2.6" height="2.4" fill="'+c+'"/>' +
+      '<rect x="12" y="10" width="2.6" height="2.4" fill="'+c+'"/>' +
+      '<rect x="15.4" y="10" width="2.6" height="2.4" fill="'+c+'"/>' +
+      '<circle cx="7" cy="15.9" r="1.6" fill="'+c+'"/>' +
+      '<circle cx="16" cy="15.9" r="1.6" fill="'+c+'"/>'; },
+    // Trois roues : cabine + canopée à droite, une roue avant, deux roues arrière.
+    trois_roues: function(c){ return '' +
+      '<rect x="12.6" y="7.6" width="7.0" height="6.4" fill="#fff"/>' +
+      '<path d="M12.6 7.6L13.6 5.4L20.4 5.4L19.6 7.6Z" fill="#fff"/>' +
+      '<rect x="14.4" y="9.2" width="3.4" height="2.6" fill="'+c+'"/>' +
+      '<rect x="6.2" y="13.4" width="7" height="1.4" fill="#fff"/>' +
+      '<rect x="5.6" y="10.6" width="1.2" height="3.0" fill="#fff"/>' +
+      '<rect x="4.4" y="10.2" width="3.6" height="1.0" fill="#fff"/>' +
+      '<circle cx="6" cy="16.6" r="1.9" fill="#fff"/><circle cx="6" cy="16.6" r="0.85" fill="'+c+'"/>' +
+      '<circle cx="14.6" cy="16.6" r="1.9" fill="#fff"/><circle cx="14.6" cy="16.6" r="0.85" fill="'+c+'"/>' +
+      '<circle cx="18.6" cy="16.6" r="1.9" fill="#fff"/><circle cx="18.6" cy="16.6" r="0.85" fill="'+c+'"/>'; },
+    // Moto-taxi : moto + silhouette du conducteur (casque + torse).
+    moto_taxi: function(c){ return '' +
+      '<path d="M6.4 16.6L9.6 12.2L15.2 12.2L17.6 16.6Z" fill="#fff"/>' +
+      '<rect x="8.6" y="10.6" width="4.2" height="1.8" fill="#fff"/>' +
+      '<circle cx="12.4" cy="8.4" r="1.9" fill="#fff"/>' +
+      '<rect x="11" y="10" width="2.8" height="2.6" fill="#fff"/>' +
+      '<circle cx="17" cy="13.6" r="0.8" fill="'+c+'"/>' +
+      '<circle cx="6.6" cy="17" r="2.1" fill="#fff"/><circle cx="6.6" cy="17" r="1" fill="'+c+'"/>' +
+      '<circle cx="17.4" cy="17" r="2.1" fill="#fff"/><circle cx="17.4" cy="17" r="1" fill="'+c+'"/>'; }
+  };
+
+  function vehicleIconSvg(segId, couleur, sizePx){
+    var build = VEHICLE_ICON_PATHS[segId];
+    var inner = build ? build(couleur) : '';
+    return '<svg viewBox="0 0 24 24" width="'+sizePx+'" height="'+sizePx+'" aria-hidden="true">'+inner+'</svg>';
+  }
+
+  // Pastille colorée + pictogramme — remplace l'ancien <span class="emoji">segEmoji</span> pour
+  // les 6 activités (onboarding, en-tête accueil, Réglages). pastilleSize = diamètre de la
+  // pastille en px, iconSize = taille du SVG à l'intérieur.
+  function renderSegIcon(seg, pastilleSize, iconSize){
+    if(!seg) return '<span class="seg-icon" style="width:'+pastilleSize+'px;height:'+pastilleSize+'px;background:#3a3f4c;"></span>';
+    return '<span class="seg-icon" style="width:'+pastilleSize+'px;height:'+pastilleSize+'px;background:'+seg.couleur+';">' +
+      vehicleIconSvg(seg.id, seg.couleur, iconSize) +
+      '</span>';
+  }
 
   var EMOJI_CHOICES = ["💧","🍔","📱","🧯","🧾","🚔","🅿️","🛞","🧴","🧰","🧊","💊","🏠","🐔","☕","➕"];
   var COLOR_CHOICES = ["#f5a623","#e5533c","#4c8bf5","#34b37e","#9b6bd6","#e0578a","#35b4c9","#c9a227","#7f8c9a"];
@@ -1086,7 +1194,7 @@
   /* ---------- État ---------- */
 
   var state = null;
-  var ui = { screen:"loading", modal:null, modalData:{}, modalReturnTo:null, tab:"aujourdhui", etatPeriode:"semaine", objStep:1, objData:{}, objEditing:false, objCreating:false, overlay:null, locked:false, lockPin:"", partagerPeriode:"jour", accueilDate:null };
+  var ui = { screen:"loading", modal:null, modalData:{}, modalReturnTo:null, tab:"aujourdhui", etatPeriode:"jour", objStep:1, objData:{}, objEditing:false, objCreating:false, overlay:null, locked:false, lockPin:"", partagerPeriode:"jour", accueilDate:null, codeAccesInput:"", codeAccesErreur:false };
 
   // ---------- Sprint 5A : bouton retour du téléphone (navigation, pas de sortie de l'app) ----------
   // Sans ceci, le bouton/geste "retour" du téléphone quitte directement l'application dès qu'on
@@ -1171,13 +1279,15 @@
         rubriques:[],             // {id, nom, icone, couleur, actif, perso}
         onboardingComplete:false,
         pinActif:false,           // verrouillage par code PIN (F10)
-        pinCode:null              // code à 4 chiffres, ou null
+        pinCode:null,             // code à 4 chiffres, ou null
+        codeAccesOk:false,        // Sprint 7A : code d'accès test (HKETCK) validé une fois pour toutes
+        joursRoulesParSemaine:6   // Sprint 7A : réglage unique "jours roulés/semaine", partagé par les 3 objectifs
       },
       jours:{},                   // { 'AAAA-MM-JJ': {date, origine:'trepor', recette, charges:[]} }
       dernierMontant:{},          // { rubriqueId: montant }
       // Sprint 6B : remplace l'ancien objectif unique (state.objectif) par une liste de 3
       // maximum. Chaque élément : { id, modele, sousType, nom, type:'auto'|'manuel',
-      // pourcentage (auto seulement), montantFixeParJour (manuel seulement), joursRoules,
+      // pourcentage (auto seulement), montantFixeParJour (manuel seulement),
       // montantCible (0 pour tout nouvel objectif — jauge % réservée aux objectifs migrés
       // depuis l'ancien modèle unique qui en avaient un), dateCreation, actif }.
       objectifs:[],
@@ -1220,6 +1330,21 @@
     }
   }
 
+  // Sprint 7A : "jours roulés par semaine" devient un réglage unique (config.joursRoulesParSemaine),
+  // partagé par les 3 objectifs, au lieu d'une valeur par objectif. Si une sauvegarde existante a
+  // plusieurs objectifs avec des valeurs différentes, on reprend celle du premier objectif défini
+  // (le tableau state.objectifs est déjà dans l'ordre de création — voir finaliserCreationObjectif).
+  // Appelée après migrerObjectifsListe (a besoin de config et objectifs déjà présents).
+  // IMPORTANT : le paramètre `dejaDefiniAvantFusion` doit être calculé sur l'objet config TEL QUE
+  // SAUVEGARDÉ, avant toute fusion défensive avec defaultState() — sinon la valeur par défaut
+  // (6, déjà un nombre valide) masquerait le fait qu'aucun réglage n'existait encore et la
+  // migration depuis le premier objectif ne se déclencherait jamais.
+  function migrerJoursRoulesParSemaine(config, objectifs, dejaDefiniAvantFusion){
+    if(dejaDefiniAvantFusion) return;
+    var premier = (objectifs || [])[0];
+    config.joursRoulesParSemaine = (premier && premier.joursRoules) ? premier.joursRoules : 6;
+  }
+
   // Sprint 6A : les rubriques préconfigurées ajoutées après le premier lancement d'un
   // utilisateur (ici Contraventions et Nourriture au travail) ne sont créées qu'à l'onboarding
   // (voir plus bas) — sans ce rattrapage, un utilisateur déjà en cours d'usage ne les verrait
@@ -1241,12 +1366,16 @@
       if(!raw) return defaultState();
       var parsed = JSON.parse(raw);
       if(!parsed || !parsed.config) return defaultState();
+      // Sprint 7A : à calculer AVANT la fusion défensive ci-dessous, qui poserait sinon un 6
+      // par défaut et masquerait le fait qu'aucun réglage n'existait encore dans la sauvegarde.
+      var joursRoulesDejaDefini = typeof parsed.config.joursRoulesParSemaine === "number";
       // fusion défensive si des clés manquent
       var base = defaultState();
       parsed.config = Object.assign(base.config, parsed.config);
       parsed.jours = parsed.jours || {};
       parsed.dernierMontant = parsed.dernierMontant || {};
       migrerObjectifsListe(parsed);
+      migrerJoursRoulesParSemaine(parsed.config, parsed.objectifs, joursRoulesDejaDefini);
       parsed.meta = Object.assign({}, base.meta, parsed.meta || {});
       ajouterNouvellesRubriquesDefaut(parsed.config);
       return parsed;
@@ -1257,6 +1386,9 @@
 
   // Fusionne un objet restauré (sauvegarde JSON) dans une structure d'état complète et sûre.
   function normaliserEtatImporte(parsed){
+    // Sprint 7A : à calculer AVANT la fusion défensive juste en dessous (voir commentaire de
+    // migrerJoursRoulesParSemaine plus haut).
+    var joursRoulesDejaDefini = !!(parsed.config && typeof parsed.config.joursRoulesParSemaine === "number");
     var base = defaultState();
     var out = {};
     out.version = parsed.version || 1;
@@ -1266,6 +1398,7 @@
     out.objectif = parsed.objectif !== undefined ? parsed.objectif : null;
     out.objectifs = parsed.objectifs;
     migrerObjectifsListe(out);
+    migrerJoursRoulesParSemaine(out.config, out.objectifs, joursRoulesDejaDefini);
     out.meta = Object.assign({}, base.meta, parsed.meta || {});
     ajouterNouvellesRubriquesDefaut(out.config);
     return out;
@@ -1497,6 +1630,18 @@
     });
   }
 
+  // Sprint 7A (point 15) : estimation compacte jour + semaine + mois pour un scénario
+  // d'objectif automatique, à partir de l'épargne hebdomadaire estimée et du nombre de
+  // jours roulés/semaine choisi juste avant. Le mois est approximatif (moyenne ≈ 4,345
+  // semaines/mois, cohérente avec formatDureeSemaines plus bas) — d'où le "~".
+  function estimationScenarioCompacte(epargneHebdo, jr){
+    if(!epargneHebdo || epargneHebdo <= 0) return "";
+    var joursParSemaine = jr || 6;
+    var parJour = epargneHebdo / joursParSemaine;
+    var parMois = epargneHebdo * 4.345;
+    return formatFCFA(parJour)+"/jour · ~"+formatFCFA(epargneHebdo)+"/semaine · ~"+formatFCFA(parMois)+"/mois";
+  }
+
   function formatDureeSemaines(sem){
     if(sem === null || sem === undefined || !isFinite(sem)) return "À déterminer";
     if(sem <= 8) return sem + (sem > 1 ? " semaines" : " semaine");
@@ -1604,8 +1749,55 @@
 
   var app = document.getElementById("app");
 
+  /* ===================== CODE D'ACCÈS TEST (Sprint 7A) ===================== */
+  /* Écran affiché avant tout le reste (avant même l'onboarding) tant que le code n'a pas été
+     validé une fois. Comparaison insensible à la casse, espaces avant/après retirés. Une fois
+     validé, stocké dans state.config.codeAccesOk comme le reste (localStorage) — jamais
+     redemandé ensuite. N'a rien à voir avec le code PIN (F10). */
+
+  function renderCodeAcces(){
+    var err = ui.codeAccesErreur;
+    var html = '' +
+      '<div class="onb" style="justify-content:center; align-items:center; text-align:center; flex:1;">' +
+        '<div style="font-size:42px; margin-bottom:4px;">🔐</div>' +
+        '<h1 class="onb-title" style="text-align:center;">Code d\'accès</h1>' +
+        '<p class="onb-sub" style="text-align:center;">Entrez le code qui vous a été communiqué pour accéder à MonDjai/Trépor.</p>' +
+        '<input type="text" class="text-input" id="code-acces-input" style="text-align:center; font-size:20px; font-weight:800; letter-spacing:.08em; text-transform:uppercase;" value="'+esc(ui.codeAccesInput||"")+'" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" maxlength="24" placeholder="Code d\'accès">' +
+        (err ? '<p class="field-help" style="color:var(--red);">Code incorrect. Réessayez.</p>' : '<div style="height:21px;"></div>') +
+        '<div style="height:14px;"></div>' +
+        '<button class="btn btn-primary" id="code-acces-valider">Continuer</button>' +
+      '</div>';
+    app.innerHTML = html;
+    var input = document.getElementById("code-acces-input");
+    if(input){
+      input.focus();
+      input.addEventListener("input", function(){ ui.codeAccesInput = input.value; });
+      input.addEventListener("keydown", function(e){ if(e.key === "Enter") verifierCodeAcces(); });
+    }
+    document.getElementById("code-acces-valider").addEventListener("click", verifierCodeAcces);
+  }
+
+  function verifierCodeAcces(){
+    var input = document.getElementById("code-acces-input");
+    var val = input ? input.value : (ui.codeAccesInput || "");
+    var normalise = String(val||"").trim().toUpperCase();
+    if(normalise === CODE_ACCES){
+      state.config.codeAccesOk = true;
+      ui.codeAccesInput = "";
+      ui.codeAccesErreur = false;
+      saveState();
+      render();
+    } else {
+      ui.codeAccesErreur = true;
+      ui.codeAccesInput = val;
+      renderCodeAcces();
+    }
+  }
+
   function render(){
-    if(!state.config.onboardingComplete){
+    if(!state.config.codeAccesOk){
+      renderCodeAcces();
+    } else if(!state.config.onboardingComplete){
       renderOnboarding();
     } else if(state.config.pinActif && state.config.pinCode && ui.locked){
       renderPinLock();
@@ -1677,7 +1869,7 @@
     var cards = SEGMENTS.map(function(s){
       var sel = cfg.segment === s.id ? "selected" : "";
       return '<div class="choice-card '+sel+'" data-segment="'+s.id+'">' +
-        '<span class="emoji">'+s.emoji+'</span><span>'+esc(s.nom)+'</span></div>';
+        renderSegIcon(s, 60, 34) + '<span>'+esc(s.nom)+'</span></div>';
     }).join("");
 
     // Sprint 6B : cet écran (4 cartes + un bouton) est nettement plus court que l'espace
@@ -1734,8 +1926,11 @@
     var cfg = state.config;
     var actifs = cfg.rubriques.filter(function(r){return r.actif;}).length;
 
+    // Sprint 7A : à cette étape, Dioulatchai garde son comportement automatique (cochée pour un
+    // locataire, décochée pour un propriétaire) et n'est plus modifiable manuellement ici —
+    // seules les autres rubriques (toutes décochées par défaut désormais) se cochent à la main.
     var rows = cfg.rubriques.map(function(r){
-      return renderRubriqueRow(r);
+      return renderRubriqueRow(r, r.id === "dioulatchai");
     }).join("");
 
     var warn = actifs > MAX_RUBRIQUES_CONSEILLE
@@ -1759,11 +1954,17 @@
       '</div>';
   }
 
-  function renderRubriqueRow(r){
+  // Sprint 7A : locked=true retire la possibilité de toggle au clic (utilisé pour Dioulatchai
+  // à l'étape 3 de l'onboarding uniquement — voir onbStep3). Ailleurs (Réglages), locked est
+  // toujours false et le comportement est inchangé.
+  function renderRubriqueRow(r, locked){
     var on = r.actif ? "on" : "";
-    return '<div class="rub-row '+on+'" style="--rub-color:'+r.couleur+'" data-rub-toggle="'+r.id+'">' +
+    var toggleAttr = locked ? "" : ' data-rub-toggle="'+r.id+'"';
+    var note = r.perso ? '<span class="rub-note">Rubrique personnalisée</span>'
+      : (locked ? '<span class="rub-note">Automatique selon propriétaire/locataire</span>' : '');
+    return '<div class="rub-row '+on+'" style="--rub-color:'+r.couleur+(locked?';cursor:default;opacity:.85':'')+'"'+toggleAttr+'>' +
       '<div class="rub-icon" style="background:'+r.couleur+'">'+r.icone+'</div>' +
-      '<div class="rub-name">'+esc(r.nom)+(r.perso?'<span class="rub-note">Rubrique personnalisée</span>':'')+'</div>' +
+      '<div class="rub-name">'+esc(r.nom)+note+'</div>' +
       '<div class="switch '+on+'"></div>' +
       '</div>';
   }
@@ -1834,11 +2035,10 @@
         saveState();
         // initialise les rubriques par défaut si pas encore fait
         if(state.config.rubriques.length === 0){
+          // Sprint 7A : toutes les rubriques sont décochées par défaut désormais — sauf
+          // Dioulatchai, qui garde son comportement automatique (cochée pour un locataire).
           state.config.rubriques = RUBRIQUES_DEFAUT.map(function(r){
-            var actif;
-            if(r.parDefautLocataire === null) actif = false;
-            else if(r.parDefautLocataire === true) actif = state.config.statutVehicule === "locataire";
-            else actif = true;
+            var actif = r.id === "dioulatchai" ? (state.config.statutVehicule === "locataire") : false;
             return { id:r.id, nom:r.nom, icone:r.icone, couleur:r.couleur, actif:actif, perso:false };
           });
         } else {
@@ -1969,6 +2169,11 @@
   // aucun objectif encore actif → l'invite discrète d'avant (reprise telle quelle, y compris
   // la reconnaissance de régularité) ; au moins un objectif actif → un résumé compact de
   // toutes les épargnes en cours, qui renvoie lui aussi vers l'onglet Objectif au tap.
+  // Sprint 7A : plus appelée depuis l'accueil (points 7 et 11 du sprint — les 3 blocs occupent
+  // désormais tout l'espace restant, et le lien "Définir un objectif" a été retiré puisque le
+  // bloc Épargne ouvre déjà l'onglet Objectif). Le résumé "Mes épargnes" a été repris dans
+  // renderMesEpargnesDetailEtat() (Mon état, vue Jour). Laissée en l'état par prudence, comme
+  // renderObjectifDashboardCard/renderObjectifInviteSubtle (Sprint 5B) — code mort inoffensif.
   function renderEspaceUtileAccueil(){
     var objectifs = state.objectifs || [];
     if(objectifs.length === 0){
@@ -2032,7 +2237,7 @@
       soldeHtml = '' +
         '<div class="solde-card">' +
           '<p class="solde-label">Disponible '+(estAujourdhui?"aujourd\'hui":"— "+esc(formatDateCourte(new Date(key+"T00:00:00"))))+'</p>' +
-          '<p class="solde-value" style="color:var(--text-dim); font-size:22px;">Saisissez d\'abord la recette</p>' +
+          '<p class="solde-value" style="color:var(--text-dim); font-size:22px;">Saisissez d\'abord l\'entrée du jour</p>' +
         '</div>';
     } else {
       soldeHtml = '' +
@@ -2058,17 +2263,21 @@
     // Sprint 6B : reflète l'ensemble des objectifs actifs (montant total mis de côté ce
     // jour-là), pas un seul — même valeur que celle déduite dans "Disponible aujourd'hui"
     // ci-dessus, pour que le lien entre les deux soit visible d'un coup d'œil.
-    var epargneIcone = "💰";
+    // Sprint 7A (point 10) : icône distincte pour le bloc Épargne — 🔐 (cadenas), différente de
+    // 💰 (Entrée du jour) et de 🔑 (déjà utilisé pour Dioulatchai).
+    var epargneIcone = "🔐";
     var epargneBlocValeur = (state.objectifs && state.objectifs.length > 0)
       ? formatFCFA(epargneJourTotal)
       : '<span class="block3-empty">Aucun</span>';
 
+    // Sprint 7A (point 5) : le libellé affiché du montant principal du jour devient "Entrée du
+    // jour" (le nom interne "Recette" ne change pas dans le code — jour.recette, etc.).
     var blocsHtml = '' +
       '<div class="blocks3-row">' +
         '<div class="block3 '+(recette!==null?"set":"")+'" id="block-recette">' +
           '<span class="block3-ic">💰</span>' +
           '<div class="block3-v">'+recetteBlocValeur+'</div>' +
-          '<div class="block3-l">Recette</div>' +
+          '<div class="block3-l">Entrée du jour</div>' +
         '</div>' +
         '<div class="block3" id="block-charges">' +
           '<span class="block3-ic">🧾</span>' +
@@ -2082,24 +2291,34 @@
         '</div>' +
       '</div>';
 
+    // Sprint 7A (point 8) : date agrandie (voir CSS .home-date-btn), lien texte "Saisir un jour
+    // passé" juste dessous pour la saisie rétroactive quand on est sur aujourd'hui ; le lien
+    // "Revenir à aujourd'hui" (Sprint 5A) reste affiché tel quel quand un autre jour est choisi.
     var dateLabelHtml = estAujourdhui
       ? esc(capitalize(formatDateLongue(new Date())))
       : '<span class="chip">jour choisi</span> ' + esc(capitalize(formatDateLongue(new Date(key+"T00:00:00"))));
+    var sousLienDate = estAujourdhui
+      ? '<div class="home-date-today-link" id="btn-saisir-passe">🗓️ Saisir un jour passé</div>'
+      : '<div class="home-date-today-link" id="btn-date-today">↺ Revenir à aujourd\'hui</div>';
+
+    // Sprint 7A (point 9) : titre dynamique selon l'activité choisie à l'onboarding (remplace
+    // le titre statique "Faire le point"), avec le pictogramme SVG de l'activité (point 4).
+    var titreAccueil = seg ? seg.titre : "Mon activité";
+    var iconTitreHtml = seg ? renderSegIcon(seg, 30, 17) : "";
 
     var html = '' +
       '<div class="home-header">' +
         '<div class="home-header-row">' +
           '<div>' +
-            '<button class="home-date-btn" id="btn-date">'+dateLabelHtml+' ✎</button>' +
-            (estAujourdhui ? '' : '<div class="home-date-today-link" id="btn-date-today">↺ Revenir à aujourd\'hui</div>') +
-            '<div class="home-greet">'+(seg?seg.emoji:"👋")+' Faire le point</div>' +
+            '<button class="home-date-btn" id="btn-date">'+dateLabelHtml+'</button>' +
+            sousLienDate +
+            '<div class="home-greet">'+iconTitreHtml+' '+esc(titreAccueil)+'</div>' +
           '</div>' +
           '<button class="icon-btn" id="btn-reglages" aria-label="Réglages">⚙️</button>' +
         '</div>' +
       '</div>' +
       soldeHtml +
       blocsHtml +
-      renderEspaceUtileAccueil() +
       renderTabBarHtml("aujourdhui");
 
     app.innerHTML = html;
@@ -2119,11 +2338,6 @@
       ui.tab = "objectif";
       render();
     });
-    var espaceUtileEl = document.getElementById("objectif-invite-subtle") || document.getElementById("mini-obj-panel");
-    if(espaceUtileEl) espaceUtileEl.addEventListener("click", function(){
-      ui.tab = "objectif";
-      render();
-    });
     var reglagesBtn = document.getElementById("btn-reglages");
     if(reglagesBtn) reglagesBtn.addEventListener("click", function(){
       ui.overlay = "reglages";
@@ -2131,6 +2345,14 @@
     });
     var btnDate = document.getElementById("btn-date");
     if(btnDate) btnDate.addEventListener("click", function(){
+      ui.modal = "changer-date";
+      ui.modalData = { date: key };
+      renderModal();
+    });
+    // Sprint 7A (point 8) : même modale de changement de jour que le tap sur la date —
+    // simplement un second point d'entrée, plus visible, vers la saisie rétroactive.
+    var btnSaisirPasse = document.getElementById("btn-saisir-passe");
+    if(btnSaisirPasse) btnSaisirPasse.addEventListener("click", function(){
       ui.modal = "changer-date";
       ui.modalData = { date: key };
       renderModal();
@@ -2247,10 +2469,13 @@
     // objectifs actifs sur la période), affichée pour les 3 périodes (y compris Jour, où elle
     // n'est plus redondante puisque ce n'est plus une moyenne).
     var labelSolde = periode === "jour" ? "Solde net du jour" : "Solde net cumulé";
-    var labelRecette = periode === "jour" ? "Recette" : "Recette totale";
+    var labelRecette = periode === "jour" ? "Entrée du jour" : "Entrée totale";
     var labelCharges = periode === "jour" ? "Charges" : "Charges totales";
     var epargnePeriode = computeEpargnePeriodeTousObjectifs(range);
     var moyenneItem = '<div class="solde-sub-item"><div class="k">Épargne</div><div class="v">'+formatFCFA(epargnePeriode)+'</div></div>';
+    // Sprint 7A (point 12) : détail par objectif actif, déplacé de l'accueil vers Mon état,
+    // vue Jour, sous le détail des charges par rubrique.
+    var mesEpargnesSection = periode === "jour" ? renderMesEpargnesDetailEtat() : "";
 
     var html = '' +
       '<div class="home-header">' +
@@ -2275,6 +2500,7 @@
         '</div>' +
       '</div>' +
       rubriqueSection +
+      mesEpargnesSection +
       joursSection +
       renderTabBarHtml("etat");
 
@@ -2298,7 +2524,39 @@
       ui.overlay = "reglages";
       render();
     });
+    var mesEpargnesEl = document.getElementById("etat-mini-obj-panel");
+    if(mesEpargnesEl) mesEpargnesEl.addEventListener("click", function(){
+      ui.tab = "objectif";
+      render();
+    });
     attachTabBarEvents();
+  }
+
+  // Sprint 7A (point 12) : détail par objectif actif — même contenu que l'ancien panneau "Mes
+  // épargnes" de l'accueil (Sprint 6B), désormais affiché dans Mon état (vue Jour uniquement),
+  // sous le détail des charges par rubrique. Rien à afficher si aucun objectif n'est actif.
+  function renderMesEpargnesDetailEtat(){
+    var objectifs = state.objectifs || [];
+    if(objectifs.length === 0) return "";
+    var rows = objectifs.map(function(obj){
+      var modele = MODELES_OBJECTIF.find(function(m){ return m.id === obj.modele; });
+      var emoji = modele ? modele.emoji : (obj.type === "manuel" ? "✋" : "📈");
+      var cumule = computeEpargneCumuleeObjectif(obj);
+      var valeur = obj.montantCible
+        ? Math.min(100, Math.round(cumule / obj.montantCible * 100)) + "%"
+        : formatFCFA(cumule);
+      return '' +
+        '<div class="mini-obj-row">' +
+          '<span class="mini-obj-ic">'+emoji+'</span>' +
+          '<span class="mini-obj-nom">'+esc(obj.nom)+'</span>' +
+          '<span class="mini-obj-val">'+valeur+'</span>' +
+        '</div>';
+    }).join("");
+    return '' +
+      '<div class="mini-obj-panel" id="etat-mini-obj-panel">' +
+        '<div class="mini-obj-head"><span>Mes épargnes</span><span class="oi-arrow">›</span></div>' +
+        rows +
+      '</div>';
   }
 
   /* ===================== MON OBJECTIF (F7) ===================== */
@@ -2351,7 +2609,8 @@
     var rythmeTxt = obj.type === "auto"
       ? (obj.pourcentage ? obj.pourcentage+"% du solde net, recalculé chaque jour" : "Automatique")
       : formatFCFA(obj.montantFixeParJour||0)+" fixes chaque jour";
-    var joursTxt = obj.joursRoules ? " · "+obj.joursRoules+" j/semaine" : "";
+    // Sprint 7A (point 16) : réglage unique partagé, plus par objectif.
+    var joursTxt = state.config.joursRoulesParSemaine ? " · "+state.config.joursRoulesParSemaine+" j/semaine" : "";
 
     var body;
     if(obj.montantCible){
@@ -2399,19 +2658,14 @@
         '</div>';
     }).join("");
 
-    var sousTypesHtml = "";
-    if(ui.objData.modele){
-      var modele = MODELES_OBJECTIF.find(function(m){ return m.id === ui.objData.modele; });
-      if(modele && modele.sousTypes && modele.sousTypes.length > 0){
-        sousTypesHtml = '' +
-          '<p class="field-label">Précisez (optionnel)</p>' +
-          '<div class="emoji-grid">' +
-          modele.sousTypes.map(function(st){
-            var sel = ui.objData.sousType === st ? "selected" : "";
-            return '<div class="choice-card '+sel+'" data-soustype="'+esc(st)+'" style="flex-direction:row; padding:10px 14px; font-size:13px;">'+esc(st)+'</div>';
-          }).join("") + '</div>';
-      }
-    }
+    // Sprint 7A (point 17) : remplace l'ancienne grille de sous-types préréglés par un champ
+    // libre "Précisez (optionnel)" — sert à la fois à personnaliser/compléter le nom par défaut
+    // de l'épargne ("Véhicule / Apport achat", "Famille / Scolarité"...) et reste facultatif
+    // ("Filet de sécurité", "Épargne libre" restent tels quels sans précision).
+    var sousTypesHtml = ui.objData.modele ? ('' +
+      '<p class="field-label">Précisez (optionnel)</p>' +
+      '<input type="text" class="text-input" id="obj-soustype-input" placeholder="Ex. : Apport achat, Scolarité..." value="'+esc(ui.objData.sousType||"")+'" maxlength="30">'
+    ) : "";
 
     return '' +
       '<p class="onb-eyebrow" style="margin-top:16px;">Nouvel objectif</p>' +
@@ -2421,6 +2675,16 @@
       sousTypesHtml +
       '<div style="height:20px;"></div>' +
       '<button class="btn btn-primary" id="obj1-next" '+(ui.objData.modele?"":"disabled")+'>Continuer</button>';
+  }
+
+  // Sprint 7A (point 17) : nom par défaut d'une épargne selon le modèle choisi, complété par le
+  // champ libre "Précisez (optionnel)" — "Véhicule / Apport achat", "Famille / Scolarité",
+  // "Filet de sécurité", "Épargne libre" (sans précision, resté tel quel).
+  function nomObjectifParDefaut(modeleId, sousType){
+    var modele = MODELES_OBJECTIF.find(function(m){ return m.id === modeleId; });
+    var base = modele ? modele.nom : "Mon objectif";
+    var precision = (sousType||"").trim();
+    return precision ? (base + " / " + precision) : base;
   }
 
   // Sprint 6B : remplace l'ancienne étape "nom + montant cible" — on choisit d'abord comment
@@ -2455,8 +2719,8 @@
   }
 
   function objStep3Manuel(){
-    if(!ui.objData.nomTouched && !ui.objData.nom) ui.objData.nom = "Épargne";
-    var jr = ui.objData.joursRoules || 6;
+    if(!ui.objData.nomTouched && !ui.objData.nom) ui.objData.nom = nomObjectifParDefaut(ui.objData.modele, ui.objData.sousType);
+    var jr = ui.objData.joursRoules !== undefined ? ui.objData.joursRoules : (state.config.joursRoulesParSemaine || 6);
     var estimationHebdo = ui.objData.montantFixeParJour ? ui.objData.montantFixeParJour * jr : 0;
     var peutContinuer = !!ui.objData.montantFixeParJour;
     return '' +
@@ -2465,6 +2729,7 @@
       '<p class="field-label">Comment on l\'appelle ?</p>' +
       '<input type="text" class="text-input" id="obj-nom" value="'+esc(ui.objData.nom||"")+'" maxlength="40">' +
       '<p class="field-label" style="margin-top:14px;">Combien de jours roulez-vous par semaine ?</p>' +
+      '<p class="field-help" style="margin-top:-6px; margin-bottom:8px;">Ce réglage est commun à vos 3 objectifs.</p>' +
       renderJoursRoulesRow(jr) +
       '<p class="field-label" style="margin-top:14px;">Montant visé chaque jour</p>' +
       '<div class="amount-input-wrap">' +
@@ -2482,7 +2747,7 @@
   }
 
   function objStep3Auto(){
-    var jr = ui.objData.joursRoules || 6;
+    var jr = ui.objData.joursRoules !== undefined ? ui.objData.joursRoules : (state.config.joursRoulesParSemaine || 6);
     var scenarios = computeScenarios(0); // pas de cible pour un objectif créé via ce sprint
     var info = computeMoyenneHebdoRecente();
 
@@ -2492,11 +2757,12 @@
 
     var cards = scenarios.map(function(s){
       var sel = ui.objData.pourcentageChoisi === s.pourcentage ? "selected" : "";
+      var estimTxt = estimationScenarioCompacte(s.epargneHebdo, jr);
       return '' +
         '<div class="choice-card scenario-card '+sel+'" data-scenario="'+s.pourcentage+'">' +
           '<div>' +
             '<div class="sc-name">'+(NOMS_SCENARIO[s.pourcentage]||"")+' · '+s.pourcentage+'%</div>' +
-            '<div class="sc-sub">'+(s.epargneHebdo>0 ? formatFCFA(s.epargneHebdo)+" / semaine" : "à déterminer")+'</div>' +
+            '<div class="sc-sub">'+(estimTxt || "à déterminer")+'</div>' +
           '</div>' +
         '</div>';
     }).join("");
@@ -2505,6 +2771,7 @@
       '<p class="onb-eyebrow" style="margin-top:16px;">Nouvel objectif — Automatique</p>' +
       '<h1 class="onb-title" style="font-size:20px;">À quel rythme ?</h1>' +
       '<p class="field-label">Combien de jours roulez-vous par semaine ?</p>' +
+      '<p class="field-help" style="margin-top:-6px; margin-bottom:8px;">Ce réglage est commun à vos 3 objectifs.</p>' +
       renderJoursRoulesRow(jr) +
       '<div style="height:10px;"></div>' +
       note +
@@ -2524,10 +2791,9 @@
       showToast("Un seul objectif automatique à la fois.");
       return;
     }
-    var modele = MODELES_OBJECTIF.find(function(m){ return m.id === ui.objData.modele; });
     var nomFinal = ui.objData.type === "manuel"
-      ? ((ui.objData.nom||"").trim() || "Épargne")
-      : ((modele ? modele.nom : "Mon objectif") + (ui.objData.sousType ? " — "+ui.objData.sousType : ""));
+      ? ((ui.objData.nom||"").trim() || nomObjectifParDefaut(ui.objData.modele, ui.objData.sousType))
+      : nomObjectifParDefaut(ui.objData.modele, ui.objData.sousType);
     var nouvel = {
       id: uid("obj"),
       modele: ui.objData.modele || null,
@@ -2537,11 +2803,13 @@
       pourcentage: ui.objData.type === "auto" ? ui.objData.pourcentageChoisi : null,
       montantFixeParJour: ui.objData.type === "manuel" ? (ui.objData.montantFixeParJour || 0) : null,
       montantCible: 0,
-      joursRoules: ui.objData.joursRoules || 6,
       dateCreation: todayKey(),
       actif: true
     };
     state.objectifs.push(nouvel);
+    // Sprint 7A (point 16) : "jours roulés/semaine" est désormais un réglage unique partagé
+    // par les 3 objectifs (state.config.joursRoulesParSemaine), plus une valeur par objectif.
+    state.config.joursRoulesParSemaine = ui.objData.joursRoules || state.config.joursRoulesParSemaine || 6;
     saveState();
     ui.objStep = 1;
     ui.objData = {};
@@ -2586,11 +2854,12 @@
           renderObjectif();
         });
       });
-      app.querySelectorAll("[data-soustype]").forEach(function(node){
-        node.addEventListener("click", function(){
-          ui.objData.sousType = node.getAttribute("data-soustype");
-          renderObjectif();
-        });
+      // Sprint 7A (point 17) : le champ libre "Précisez (optionnel)" remplace l'ancienne
+      // grille de sous-types préréglés — pas de re-render à chaque frappe (on garderait le
+      // focus sinon), juste la mise à jour de la donnée en mémoire.
+      var soustypeInput = app.querySelector("#obj-soustype-input");
+      if(soustypeInput) soustypeInput.addEventListener("input", function(){
+        ui.objData.sousType = soustypeInput.value;
       });
       var next1 = document.getElementById("obj1-next");
       if(next1) next1.addEventListener("click", function(){ ui.objStep = 2; renderObjectif(); });
@@ -2612,7 +2881,9 @@
       if(back2) back2.addEventListener("click", function(){ ui.objStep = 1; renderObjectif(); });
       var next2 = document.getElementById("obj2-next");
       if(next2) next2.addEventListener("click", function(){
-        if(!ui.objData.joursRoules) ui.objData.joursRoules = 6;
+        // Sprint 7A (point 16) : "jours roulés/semaine" est un réglage unique partagé — on
+        // part de sa valeur actuelle plutôt que d'un 6 fixe.
+        if(ui.objData.joursRoules === undefined) ui.objData.joursRoules = state.config.joursRoulesParSemaine || 6;
         ui.objStep = 3;
         renderObjectif();
       });
@@ -2726,7 +2997,7 @@
   function modalRecette(){
     return '' +
       '<div class="modal-handle"></div>' +
-      '<h2 class="modal-title">Recette du jour</h2>' +
+      '<h2 class="modal-title">Entrée du jour</h2>' +
       '<p class="modal-sub">Le montant total encaissé '+entryDateLabel()+'.</p>' +
       '<div class="amount-input-wrap">' +
         '<input type="text" inputmode="numeric" id="modal-recette-input" placeholder="0" value="'+esc(spacedDigits(ui.modalData.montant))+'" autofocus>' +
@@ -2997,7 +3268,7 @@
         '<p class="solde-value '+(enPerte?"neg":"")+'" style="font-size:30px;">'+(recette===null?"—":formatFCFA(solde))+'</p>' +
         (enPerte ? '<div class="perte-banner">Jour à perte : '+formatFCFA(Math.abs(solde))+'</div>' : '') +
         '<div class="solde-sub">' +
-          '<div class="solde-sub-item"><div class="k">Recette</div><div class="v">'+(recette===null?"—":formatFCFA(recette))+'</div></div>' +
+          '<div class="solde-sub-item"><div class="k">Entrée du jour</div><div class="v">'+(recette===null?"—":formatFCFA(recette))+'</div></div>' +
           '<div class="solde-sub-item"><div class="k">Charges</div><div class="v">'+formatFCFA(totalCh)+'</div></div>' +
         '</div>' +
       '</div>' +
@@ -3052,7 +3323,8 @@
       return '<div class="modal-handle"></div><p class="modal-sub">Objectif introuvable.</p>' +
         '<button class="btn btn-ghost" id="modif-obj-close">Fermer</button>';
     }
-    var jr = ui.modalData.joursRoules !== undefined ? ui.modalData.joursRoules : (obj.joursRoules || 6);
+    // Sprint 7A (point 16) : réglage unique partagé par les 3 objectifs, plus par objectif.
+    var jr = ui.modalData.joursRoules !== undefined ? ui.modalData.joursRoules : (state.config.joursRoulesParSemaine || 6);
     var nomVal = ui.modalData.nom !== undefined ? ui.modalData.nom : obj.nom;
 
     var champsSpecifiques;
@@ -3071,11 +3343,12 @@
         '<p class="field-label" style="margin-top:14px;">Rythme</p>' +
         '<div class="choice-row">' + scenarios.map(function(s){
           var sel = pctChoisi === s.pourcentage ? "selected" : "";
+          var estimTxt = estimationScenarioCompacte(s.epargneHebdo, jr);
           return '' +
             '<div class="choice-card scenario-card '+sel+'" data-scenario="'+s.pourcentage+'">' +
               '<div>' +
                 '<div class="sc-name">'+(NOMS_SCENARIO[s.pourcentage]||"")+' · '+s.pourcentage+'%</div>' +
-                '<div class="sc-sub">'+(s.epargneHebdo>0 ? formatFCFA(s.epargneHebdo)+" / semaine" : "à déterminer")+'</div>' +
+                '<div class="sc-sub">'+(estimTxt || "à déterminer")+'</div>' +
               '</div>' +
             '</div>';
         }).join("") + '</div>';
@@ -3087,6 +3360,7 @@
       '<p class="field-label">Nom</p>' +
       '<input type="text" class="text-input" id="modif-obj-nom" value="'+esc(nomVal)+'" maxlength="40">' +
       '<p class="field-label" style="margin-top:14px;">Jours roulés par semaine</p>' +
+      '<p class="field-help" style="margin-top:-6px; margin-bottom:8px;">Ce réglage est commun à vos 3 objectifs.</p>' +
       renderJoursRoulesRow(jr) +
       champsSpecifiques +
       '<div style="height:14px"></div>' +
@@ -3126,7 +3400,8 @@
     document.getElementById("modif-obj-save").addEventListener("click", function(){
       var nomInputEl = document.getElementById("modif-obj-nom");
       obj.nom = (nomInputEl ? nomInputEl.value.trim() : "") || obj.nom;
-      obj.joursRoules = ui.modalData.joursRoules !== undefined ? ui.modalData.joursRoules : obj.joursRoules;
+      // Sprint 7A (point 16) : réglage unique partagé, plus par objectif.
+      state.config.joursRoulesParSemaine = ui.modalData.joursRoules !== undefined ? ui.modalData.joursRoules : state.config.joursRoulesParSemaine;
       if(obj.type === "manuel"){
         var montantInputEl = document.getElementById("modif-obj-montant");
         obj.montantFixeParJour = parseAmountInput(montantInputEl ? montantInputEl.value : ui.modalData.montantFixeParJour);
@@ -3196,7 +3471,7 @@
       ui.objData = {};
       ui.objEditing = false;
       ui.objCreating = false;
-      ui.etatPeriode = "semaine";
+      ui.etatPeriode = "jour";
       ui.partagerPeriode = "jour";
       ui.locked = !!(state.config.pinActif && state.config.pinCode);
       render();
@@ -3257,7 +3532,7 @@
     var segCards = SEGMENTS.map(function(s){
       var sel = cfg.segment === s.id ? "selected" : "";
       return '<div class="choice-card '+sel+'" data-reg-segment="'+s.id+'">' +
-        '<span class="emoji">'+s.emoji+'</span><span>'+esc(s.nom)+'</span></div>';
+        renderSegIcon(s, 56, 32) + '<span>'+esc(s.nom)+'</span></div>';
     }).join("");
 
     var isLoc = cfg.statutVehicule === "locataire";
@@ -3348,6 +3623,11 @@
           '</div>' +
           '<p class="field-help">Vos données restent sur votre téléphone. Sauvegardez chaque semaine : en cas de changement de téléphone ou d\'effacement du navigateur, c\'est le seul moyen de les retrouver.</p>' +
         '</div>' +
+
+        // Sprint 7A (point 20) : geste de confirmation explicite, en complément de la
+        // sauvegarde automatique déjà en place à chaque changement (qui continue de
+        // fonctionner sans rien changer) — utile à qui veut être sûr que "c'est bien noté".
+        '<button class="btn btn-primary" id="reg-valider" style="margin-bottom:12px;">✓ Valider mes modifications</button>' +
 
         '<button class="btn btn-ghost" id="reg-apropos">ℹ️ À propos de MonDjai/Trépor</button>' +
       '</div>';
@@ -3441,6 +3721,12 @@
 
     var apropos = document.getElementById("reg-apropos");
     if(apropos) apropos.addEventListener("click", function(){ ui.overlay = "apropos"; render(); });
+
+    var validerBtn = document.getElementById("reg-valider");
+    if(validerBtn) validerBtn.addEventListener("click", function(){
+      saveState();
+      showToast("Modifications enregistrées.");
+    });
   }
 
   function modalConfirmSupprRubrique(){
@@ -3483,7 +3769,7 @@
         '</div>' +
         '<div class="settings-section">' +
           '<p style="font-size:16px; font-weight:800; color:var(--accent); margin:0 0 12px;">Chaque jour compte : on note, on avance.</p>' +
-          '<p style="color:var(--text-dim); font-size:14px; line-height:1.6; margin:0 0 12px;">MonDjai/Trépor est le carnet que vous n\'avez jamais le temps de tenir. Notez votre recette et vos charges du jour, et sachez tout de suite ce qu\'il vous reste vraiment — en 30 secondes, sans calcul de tête.</p>' +
+          '<p style="color:var(--text-dim); font-size:14px; line-height:1.6; margin:0 0 12px;">MonDjai/Trépor est le carnet que vous n\'avez jamais le temps de tenir. Notez votre entrée du jour et vos charges, et sachez tout de suite ce qu\'il vous reste vraiment — en 30 secondes, sans calcul de tête.</p>' +
           '<p style="color:var(--text-dim); font-size:14px; line-height:1.6; margin:0;">Vos données restent sur votre téléphone : rien n\'est envoyé nulle part, et l\'application fonctionne sans connexion, même une fois installée.</p>' +
         '</div>' +
         '<p style="text-align:center; color:var(--text-faint); font-size:12px; margin-top:6px;">MonDjai/Trépor fait partie de la famille d\'applis MonDjai pour les métiers du terrain.</p>' +
@@ -3817,7 +4103,7 @@
     var seg = SEGMENTS.find(function(s){ return s.id === state.config.segment; });
     ctx.fillStyle = "#9aa0ac";
     ctx.font = "700 25px " + SHARE_FONT;
-    var segLabel = seg ? (seg.emoji + " " + seg.nom + "  ·  ") : "";
+    var segLabel = seg ? (seg.nom + "  ·  ") : "";
     ctx.fillText(segLabel + data.titrePeriode, pad, y);
 
     y += 44;
@@ -3875,7 +4161,7 @@
     // sur la période.
     var colW3 = (W - pad*2) / 3;
     var labels3 = [
-      data.periode === "jour" ? "RECETTE" : "RECETTE TOTALE",
+      data.periode === "jour" ? "ENTRÉE DU JOUR" : "ENTRÉE TOTALE",
       data.periode === "jour" ? "CHARGES" : "CHARGES TOTALES",
       "ÉPARGNE"
     ];
