@@ -845,6 +845,41 @@
     text-align:center;
     text-transform:capitalize;
   }
+  /* Sprint 7B : navigation ‹ › entre périodes passées, vues Semaine et Mois de Mon état */
+  .etat-period-nav{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:12px;
+    margin:10px 20px 0;
+  }
+  .etat-period-nav .etat-period-label{margin:0; flex:1; min-width:0;}
+  .etat-nav-btn{
+    width:30px;height:30px;
+    border-radius:50%;
+    background:var(--card);
+    border:1px solid var(--border);
+    color:var(--text-dim);
+    font-size:17px;
+    font-weight:800;
+    line-height:1;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    flex-shrink:0;
+    padding:0;
+  }
+  .etat-nav-btn:disabled{opacity:.32; cursor:not-allowed;}
+  .etat-back-link{
+    display:block;
+    background:transparent;
+    border:none;
+    color:var(--accent);
+    font-size:14px;
+    font-weight:700;
+    margin:16px 20px 0;
+    padding:0;
+    cursor:pointer;
+  }
   .day-row{
     display:flex;
     align-items:center;
@@ -1194,7 +1229,13 @@
   /* ---------- État ---------- */
 
   var state = null;
-  var ui = { screen:"loading", modal:null, modalData:{}, modalReturnTo:null, tab:"aujourdhui", etatPeriode:"jour", objStep:1, objData:{}, objEditing:false, objCreating:false, overlay:null, locked:false, lockPin:"", partagerPeriode:"jour", accueilDate:null, codeAccesInput:"", codeAccesErreur:false };
+  var ui = { screen:"loading", modal:null, modalData:{}, modalReturnTo:null, tab:"aujourdhui", etatPeriode:"jour", objStep:1, objData:{}, objEditing:false, objCreating:false, overlay:null, locked:false, lockPin:"", partagerPeriode:"jour", accueilDate:null, codeAccesInput:"", codeAccesErreur:false,
+    // Sprint 7B : période consultée dans l'onglet Mon état (vues Semaine/Mois), état d'interface
+    // uniquement, jamais persisté — remis à la période en cours à chaque ouverture de l'app.
+    // etatSemaineRef / etatMoisRef mémorisent la clé (AAAA-MM-JJ) du lundi de la semaine / du 1er
+    // du mois actuellement affiché ; etatDrillSemaine (clé du lundi d'une semaine, ou null) est le
+    // sous-état "détail d'une semaine" ouvert depuis la vue Mois.
+    etatSemaineRef:null, etatMoisRef:null, etatDrillSemaine:null };
 
   // ---------- Sprint 5A : bouton retour du téléphone (navigation, pas de sortie de l'app) ----------
   // Sans ceci, le bouton/geste "retour" du téléphone quitte directement l'application dès qu'on
@@ -1247,6 +1288,14 @@
     if(ui.tab === "objectif" && enCreationObjectif()){
       if((ui.objStep||1) > 1){ ui.objStep -= 1; render(); return; }
       if(state.objectifs.length > 0){ ui.objCreating = false; ui.objData = {}; render(); return; }
+    }
+    // Sprint 7B : depuis le détail d'une semaine ouvert dans la vue Mois de Mon état, un retour
+    // physique referme d'abord ce sous-état (retour à la liste des semaines) avant de quitter
+    // l'onglet — même principe que l'assistant Objectif ci-dessus.
+    if(ui.tab === "etat" && ui.etatPeriode === "mois" && ui.etatDrillSemaine){
+      ui.etatDrillSemaine = null;
+      render(); // (pas renderEtat() direct) — ré-arme l'historique pour le prochain retour physique
+      return;
     }
     if(ui.tab && ui.tab !== "aujourdhui"){ ui.tab = "aujourdhui"; render(); return; }
   }
@@ -2410,20 +2459,111 @@
 
   /* ===================== MON ÉTAT (semaine / mois + historique) ===================== */
 
-  function renderEtat(){
-    var periode = (ui.etatPeriode === "mois" || ui.etatPeriode === "jour") ? ui.etatPeriode : "semaine";
-    var range = periode === "mois" ? getMonthRange(new Date())
-      : periode === "jour" ? getDayRange(new Date())
-      : getWeekRange(new Date());
-    var stats = computeEtatStats(range);
-    var enPerte = stats.soldeCumule < 0;
+  // Sprint 7B : ui.etatSemaineRef / ui.etatMoisRef mémorisent la période consultée (état
+  // d'interface, jamais persisté). Initialisation paresseuse sur la période en cours au premier
+  // rendu — donc aussi bien au tout premier affichage qu'après chaque (re)chargement de l'app.
+  function ensureEtatRefs(){
+    if(!ui.etatSemaineRef) ui.etatSemaineRef = getWeekRange(new Date()).start;
+    if(!ui.etatMoisRef) ui.etatMoisRef = getMonthRange(new Date()).start;
+  }
 
-    var periodLabel = periode === "mois"
-      ? capitalize(MOIS_FR[new Date().getMonth()]) + " " + new Date().getFullYear()
-      : periode === "jour"
-      ? capitalize(formatDateLongue(new Date()))
-      : "Du " + formatDateCourte(range.startDate) + " au " + formatDateCourte(range.endDate);
+  function shiftEtatSemaine(delta){
+    var refDate = new Date(ui.etatSemaineRef + "T00:00:00");
+    var newDate = new Date(refDate.getFullYear(), refDate.getMonth(), refDate.getDate() + delta*7);
+    var newRange = getWeekRange(newDate);
+    var todayRange = getWeekRange(new Date());
+    if(newRange.start > todayRange.start) return; // jamais au-delà d'aujourd'hui
+    ui.etatSemaineRef = newRange.start;
+    renderEtat();
+  }
 
+  function shiftEtatMois(delta){
+    var refDate = new Date(ui.etatMoisRef + "T00:00:00");
+    var newDate = new Date(refDate.getFullYear(), refDate.getMonth() + delta, 1);
+    var newRange = getMonthRange(newDate);
+    var todayRange = getMonthRange(new Date());
+    if(newRange.start > todayRange.start) return; // jamais au-delà d'aujourd'hui
+    ui.etatMoisRef = newRange.start;
+    ui.etatDrillSemaine = null; // changer de mois referme un éventuel détail de semaine ouvert
+    renderEtat();
+  }
+
+  // Flèches ‹ › de part et d'autre du libellé de période (vues Semaine et Mois uniquement).
+  function renderEtatNavHtml(periodLabel, atCurrent){
+    return '' +
+      '<div class="etat-period-nav">' +
+        '<button class="etat-nav-btn" id="etat-nav-prev" aria-label="Période précédente">‹</button>' +
+        '<div class="etat-period-label">'+esc(periodLabel)+'</div>' +
+        '<button class="etat-nav-btn" id="etat-nav-next" '+(atCurrent?'disabled aria-disabled="true"':'')+' aria-label="Période suivante">›</button>' +
+      '</div>';
+  }
+
+  // Liste "Jours enregistrés" (day-row cliquables vers la modale jour-detail existante) —
+  // partagée par la vue Semaine et par le détail d'une semaine ouvert depuis la vue Mois.
+  function renderJoursSection(stats){
+    var joursKeys = stats.keys.filter(function(k){ return k !== todayKey(); }).slice().sort().reverse();
+    var joursRows = joursKeys.map(function(k){
+      var j = state.jours[k];
+      var totalCh = j.charges.reduce(function(s,c){ return s + c.montant; }, 0);
+      var solde = (j.recette||0) - totalCh;
+      var d = new Date(k + "T00:00:00");
+      return '' +
+        '<div class="day-row" data-open-jour="'+k+'">' +
+          '<div class="day-row-date">'+esc(JOURS_FR[d.getDay()]+" "+d.getDate()+" "+MOIS_FR[d.getMonth()])+(j.saisiApresCoup?' <span style="color:var(--text-faint); font-weight:500; text-transform:none;">· saisi plus tard</span>':'')+'</div>' +
+          '<div class="day-row-solde '+(solde<0?"neg":"")+'">'+formatFCFA(solde)+'</div>' +
+        '</div>';
+    }).join("");
+    return '' +
+      '<div class="charges-section">' +
+        '<div class="charges-title">Jours enregistrés</div>' +
+        (joursRows || '<div class="empty-state">Aucun jour archivé pour l\'instant.</div>') +
+      '</div>';
+  }
+
+  // Toutes les semaines civiles (lundi-dimanche) recoupant le mois de monthRange, la plus
+  // récente en premier. Une semaine à cheval sur le mois voisin s'affiche en entier (hypothèse
+  // retenue) — d'où le passage jour par jour plutôt qu'un simple découpage en tranches de 7.
+  function getWeeksOfMonth(monthRange){
+    var weeks = [];
+    var seen = {};
+    var cur = new Date(monthRange.startDate);
+    while(cur <= monthRange.endDate){
+      var wr = getWeekRange(cur);
+      if(!seen[wr.start]){
+        seen[wr.start] = true;
+        weeks.push(wr);
+      }
+      cur = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate()+1);
+    }
+    weeks.sort(function(a,b){ return a.start < b.start ? 1 : -1; }); // plus récente d'abord
+    return weeks;
+  }
+
+  // Sprint 7B (point 2) : vue Mois → liste de semaines (remplace la liste à plat des jours).
+  // Une ligne par semaine civile recoupant le mois affiché, avec sa plage de dates et son solde
+  // net — même rendu (.day-row) que "Jours enregistrés", chaque ligne ouvre le détail de la
+  // semaine (data-open-semaine).
+  function renderSemainesSection(monthRange){
+    var weeks = getWeeksOfMonth(monthRange);
+    var rows = weeks.map(function(wr){
+      var stats = computeEtatStats(wr);
+      var label = "Du " + formatDateCourte(wr.startDate) + " au " + formatDateCourte(wr.endDate);
+      return '' +
+        '<div class="day-row" data-open-semaine="'+wr.start+'">' +
+          '<div class="day-row-date">'+esc(label)+'</div>' +
+          '<div class="day-row-solde '+(stats.soldeCumule<0?"neg":"")+'">'+formatFCFA(stats.soldeCumule)+'</div>' +
+        '</div>';
+    }).join("");
+    return '' +
+      '<div class="charges-section">' +
+        '<div class="charges-title">Semaines</div>' +
+        (rows || '<div class="empty-state">Aucune semaine dans ce mois.</div>') +
+      '</div>';
+  }
+
+  // Bloc commun "Charges par rubrique", réutilisé par la vue Semaine et par le détail d'une
+  // semaine ouvert depuis la vue Mois.
+  function renderRubriqueSection(stats){
     var rubIds = trierRubriqueIdsParImportance(stats.parRubrique);
     var rubriqueRows = rubIds.map(function(id){
       var r = state.config.rubriques.find(function(x){return x.id===id;});
@@ -2437,44 +2577,103 @@
           '<div class="charge-amount">'+formatFCFA(stats.parRubrique[id])+'</div>' +
         '</div>';
     }).join("");
-
-    var rubriqueSection = '' +
+    return '' +
       '<div class="charges-section">' +
         '<div class="charges-title">Charges par rubrique</div>' +
         (rubriqueRows || '<div class="empty-state">Aucune charge enregistrée sur cette période.</div>') +
       '</div>';
+  }
 
-    var joursKeys = stats.keys.filter(function(k){ return k !== todayKey(); }).slice().sort().reverse();
-    var joursRows = joursKeys.map(function(k){
-      var j = state.jours[k];
-      var totalCh = j.charges.reduce(function(s,c){ return s + c.montant; }, 0);
-      var solde = (j.recette||0) - totalCh;
-      var d = new Date(k + "T00:00:00");
-      return '' +
-        '<div class="day-row" data-open-jour="'+k+'">' +
-          '<div class="day-row-date">'+esc(JOURS_FR[d.getDay()]+" "+d.getDate()+" "+MOIS_FR[d.getMonth()])+(j.saisiApresCoup?' <span style="color:var(--text-faint); font-weight:500; text-transform:none;">· saisi plus tard</span>':'')+'</div>' +
-          '<div class="day-row-solde '+(solde<0?"neg":"")+'">'+formatFCFA(solde)+'</div>' +
-        '</div>';
-    }).join("");
-
-    var joursSection = periode === "jour" ? "" : '' +
-      '<div class="charges-section">' +
-        '<div class="charges-title">Jours enregistrés</div>' +
-        (joursRows || '<div class="empty-state">Aucun jour archivé pour l\'instant.</div>') +
+  // Carte solde (net + entrée + charges + épargne) — réutilisée par la vue Semaine et par le
+  // détail d'une semaine ouvert depuis la vue Mois.
+  function renderSoldeCardEtat(range, stats, labelSolde, labelRecette, labelCharges){
+    var enPerte = stats.soldeCumule < 0;
+    var epargnePeriode = computeEpargnePeriodeTousObjectifs(range);
+    return '' +
+      '<div class="solde-card '+(enPerte?"perte":"")+'" style="margin-top:14px;">' +
+        '<p class="solde-label">'+labelSolde+'</p>' +
+        '<p class="solde-value '+(enPerte?"neg":"")+'">'+formatFCFA(stats.soldeCumule)+'</p>' +
+        '<div class="solde-sub">' +
+          '<div class="solde-sub-item"><div class="k">'+labelRecette+'</div><div class="v">'+formatFCFA(stats.recetteTotale)+'</div></div>' +
+          '<div class="solde-sub-item"><div class="k">'+labelCharges+'</div><div class="v">'+formatFCFA(stats.chargesTotales)+'</div></div>' +
+          '<div class="solde-sub-item"><div class="k">Épargne</div><div class="v">'+formatFCFA(epargnePeriode)+'</div></div>' +
+        '</div>' +
       '</div>';
+  }
+
+  // data-open-jour est utilisé par la vue Jour, la vue Semaine, le détail d'une semaine (depuis
+  // Mois) — toujours la même modale jour-detail existante, inchangée.
+  function attachJourRowEvents(){
+    app.querySelectorAll("[data-open-jour]").forEach(function(node){
+      node.addEventListener("click", function(){
+        ui.modal = "jour-detail";
+        ui.modalData = { key: node.getAttribute("data-open-jour") };
+        renderModal();
+      });
+    });
+  }
+
+  function attachEtatCommonEvents(){
+    attachJourRowEvents();
+    var reglagesBtnEtat = document.getElementById("btn-reglages");
+    if(reglagesBtnEtat) reglagesBtnEtat.addEventListener("click", function(){
+      ui.overlay = "reglages";
+      render();
+    });
+    attachTabBarEvents();
+  }
+
+  function renderEtat(){
+    ensureEtatRefs();
+    var periode = (ui.etatPeriode === "mois" || ui.etatPeriode === "jour") ? ui.etatPeriode : "semaine";
+
+    // Sprint 7B (point 3) : détail d'une semaine ouvert depuis la vue Mois — sous-état de
+    // l'onglet Mon état, pas un nouvel onglet.
+    if(periode === "mois" && ui.etatDrillSemaine){
+      renderEtatSemaineDepuisMois();
+      return;
+    }
+
+    var range = periode === "mois" ? getMonthRange(new Date(ui.etatMoisRef + "T00:00:00"))
+      : periode === "jour" ? getDayRange(new Date())
+      : getWeekRange(new Date(ui.etatSemaineRef + "T00:00:00"));
+    var stats = computeEtatStats(range);
+
+    var periodLabel = periode === "mois"
+      ? capitalize(MOIS_FR[range.startDate.getMonth()]) + " " + range.startDate.getFullYear()
+      : periode === "jour"
+      ? capitalize(formatDateLongue(new Date()))
+      : "Du " + formatDateCourte(range.startDate) + " au " + formatDateCourte(range.endDate);
+
+    // Sprint 7B (point 1) : flèches ‹ › pour Semaine et Mois, jamais au-delà d'aujourd'hui.
+    var periodLabelHtml;
+    if(periode === "semaine"){
+      var atCurrentSemaine = range.start >= getWeekRange(new Date()).start;
+      periodLabelHtml = renderEtatNavHtml(periodLabel, atCurrentSemaine);
+    } else if(periode === "mois"){
+      var atCurrentMois = range.start >= getMonthRange(new Date()).start;
+      periodLabelHtml = renderEtatNavHtml(periodLabel, atCurrentMois);
+    } else {
+      periodLabelHtml = '<div class="etat-period-label">'+esc(periodLabel)+'</div>';
+    }
+
+    var rubriqueSection = renderRubriqueSection(stats);
+
+    // Sprint 7B (point 2) : la vue Mois affiche désormais une liste de semaines à la place de la
+    // liste à plat des jours ; la vue Jour n'affiche ni l'une ni l'autre (comme avant).
+    var joursOuSemainesSection = periode === "mois" ? renderSemainesSection(range)
+      : periode === "jour" ? ""
+      : renderJoursSection(stats);
 
     // Sprint 6A : pour « Jour », les libellés perdent leur suffixe « totale(s)/cumulé » (un seul
     // jour, pas une somme) — même logique que l'écran Partager pour son mode Jour.
-    // Sprint 6B : la ligne « Moyenne / jour » est remplacée par « Épargne » (somme des
-    // objectifs actifs sur la période), affichée pour les 3 périodes (y compris Jour, où elle
-    // n'est plus redondante puisque ce n'est plus une moyenne).
     var labelSolde = periode === "jour" ? "Solde net du jour" : "Solde net cumulé";
     var labelRecette = periode === "jour" ? "Entrée du jour" : "Entrée totale";
     var labelCharges = periode === "jour" ? "Charges" : "Charges totales";
-    var epargnePeriode = computeEpargnePeriodeTousObjectifs(range);
-    var moyenneItem = '<div class="solde-sub-item"><div class="k">Épargne</div><div class="v">'+formatFCFA(epargnePeriode)+'</div></div>';
-    // Sprint 7A (point 12) : détail par objectif actif, déplacé de l'accueil vers Mon état,
-    // vue Jour, sous le détail des charges par rubrique.
+    var soldeCardHtml = renderSoldeCardEtat(range, stats, labelSolde, labelRecette, labelCharges);
+
+    // Sprint 7A (point 12) : détail par objectif actif, affiché uniquement en vue Jour, sous le
+    // détail des charges par rubrique.
     var mesEpargnesSection = periode === "jour" ? renderMesEpargnesDetailEtat() : "";
 
     var html = '' +
@@ -2489,19 +2688,11 @@
         '<button class="seg-btn '+(periode==="semaine"?"active":"")+'" data-periode="semaine">Semaine</button>' +
         '<button class="seg-btn '+(periode==="mois"?"active":"")+'" data-periode="mois">Mois</button>' +
       '</div>' +
-      '<div class="etat-period-label">'+esc(periodLabel)+'</div>' +
-      '<div class="solde-card '+(enPerte?"perte":"")+'" style="margin-top:14px;">' +
-        '<p class="solde-label">'+labelSolde+'</p>' +
-        '<p class="solde-value '+(enPerte?"neg":"")+'">'+formatFCFA(stats.soldeCumule)+'</p>' +
-        '<div class="solde-sub">' +
-          '<div class="solde-sub-item"><div class="k">'+labelRecette+'</div><div class="v">'+formatFCFA(stats.recetteTotale)+'</div></div>' +
-          '<div class="solde-sub-item"><div class="k">'+labelCharges+'</div><div class="v">'+formatFCFA(stats.chargesTotales)+'</div></div>' +
-          moyenneItem +
-        '</div>' +
-      '</div>' +
+      periodLabelHtml +
+      soldeCardHtml +
       rubriqueSection +
       mesEpargnesSection +
-      joursSection +
+      joursOuSemainesSection +
       renderTabBarHtml("etat");
 
     app.innerHTML = html;
@@ -2512,24 +2703,58 @@
         renderEtat();
       });
     });
-    app.querySelectorAll("[data-open-jour]").forEach(function(node){
-      node.addEventListener("click", function(){
-        ui.modal = "jour-detail";
-        ui.modalData = { key: node.getAttribute("data-open-jour") };
-        renderModal();
-      });
+    var navPrev = document.getElementById("etat-nav-prev");
+    if(navPrev) navPrev.addEventListener("click", function(){
+      if(periode === "mois") shiftEtatMois(-1); else shiftEtatSemaine(-1);
     });
-    var reglagesBtnEtat = document.getElementById("btn-reglages");
-    if(reglagesBtnEtat) reglagesBtnEtat.addEventListener("click", function(){
-      ui.overlay = "reglages";
-      render();
+    var navNext = document.getElementById("etat-nav-next");
+    if(navNext && !navNext.disabled) navNext.addEventListener("click", function(){
+      if(periode === "mois") shiftEtatMois(1); else shiftEtatSemaine(1);
+    });
+    app.querySelectorAll("[data-open-semaine]").forEach(function(node){
+      node.addEventListener("click", function(){
+        ui.etatDrillSemaine = node.getAttribute("data-open-semaine");
+        renderEtat();
+      });
     });
     var mesEpargnesEl = document.getElementById("etat-mini-obj-panel");
     if(mesEpargnesEl) mesEpargnesEl.addEventListener("click", function(){
       ui.tab = "objectif";
       render();
     });
-    attachTabBarEvents();
+    attachEtatCommonEvents();
+  }
+
+  // Sprint 7B (point 3) : détail d'une semaine, ouvert en tapant sur une ligne de la liste
+  // "Semaines" de la vue Mois. Mêmes totaux et même liste de jours (day-row cliquables vers
+  // jour-detail) que la vue Semaine ; lien de retour vers la liste des semaines du mois.
+  function renderEtatSemaineDepuisMois(){
+    var range = getWeekRange(new Date(ui.etatDrillSemaine + "T00:00:00"));
+    var stats = computeEtatStats(range);
+    var periodLabel = "Du " + formatDateCourte(range.startDate) + " au " + formatDateCourte(range.endDate);
+
+    var html = '' +
+      '<div class="home-header">' +
+        '<div class="home-header-row">' +
+          '<div class="home-greet">📊 Mon état</div>' +
+          '<button class="icon-btn" id="btn-reglages" aria-label="Réglages">⚙️</button>' +
+        '</div>' +
+      '</div>' +
+      '<button class="etat-back-link" id="etat-back-to-weeks">‹ Retour aux semaines</button>' +
+      '<div class="etat-period-label">'+esc(periodLabel)+'</div>' +
+      renderSoldeCardEtat(range, stats, "Solde net cumulé", "Entrée totale", "Charges totales") +
+      renderRubriqueSection(stats) +
+      renderJoursSection(stats) +
+      renderTabBarHtml("etat");
+
+    app.innerHTML = html;
+
+    var backBtn = document.getElementById("etat-back-to-weeks");
+    if(backBtn) backBtn.addEventListener("click", function(){
+      ui.etatDrillSemaine = null;
+      renderEtat();
+    });
+    attachEtatCommonEvents();
   }
 
   // Sprint 7A (point 12) : détail par objectif actif — même contenu que l'ancien panneau "Mes
